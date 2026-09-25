@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Storage Spaces Direct Explorer — a multi-module capacity planning and resiliency education platform." />
+  <title>Storage Spaces Direct Explorer</title>
+  <style>
+    :root {
+      --bg: #07111f; --panel: #0d1b2c; --panel-2: #11243a; --panel-3: #162d46;
+      --line: #24425f; --text: #ecf5ff; --muted: #9eb5ca; --muted-2: #718ca6;
+      --blue: #43a5ff; --cyan: #6fe7e1; --green: #69d391; --amber: #ffc857;
+      --red: #ff7f87; --purple: #c995ff;
+      --ok: #69d391; --warn: #ffc857; --bad: #ff7f87;
+      --shadow: 0 18px 45px rgba(0, 0, 0, .24); --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; min-width: 320px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% -10%, rgba(67, 165, 255, .16), transparent 30rem),
+        radial-gradient(circle at 95% 8%, rgba(111, 231, 225, .08), transparent 28rem),
+        var(--bg);
+      line-height: 1.45;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .page-shell { max-width: 1440px; margin: 0 auto; padding: 28px 30px 44px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--cyan); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; font-weight: 750; }
+    .eyebrow::before { content: ""; width: 24px; height: 2px; border-radius: 99px; background: var(--cyan); }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 900px; font-size: clamp(30px, 3.6vw, 52px); line-height: 1.03; letter-spacing: -.045em; margin: 16px 0 12px; }
+    h2 { font-size: 17px; letter-spacing: -.015em; margin-bottom: 4px; }
+    h3 { font-size: 13px; margin-bottom: 4px; }
+    .lede { color: var(--muted); max-width: 780px; font-size: 16px; margin-bottom: 0; }
+    .hero { position: relative; margin-bottom: 20px; }
+    .hero-meta { position: absolute; top: 0; right: 0; display: flex; align-items: center; gap: 8px; color: var(--muted-2); font-size: 11px; text-align: right; }
+    .hero-meta .meta-label { color: var(--muted-2); text-transform: uppercase; letter-spacing: .1em; font-size: 9px; font-weight: 750; }
+    .hero-meta strong { color: var(--cyan); font-variant-numeric: tabular-nums; }
+    .hero-meta a { color: var(--text); text-decoration: none; font-weight: 650; }
+    .hero-meta a:hover { color: var(--cyan); text-decoration: underline; }
+    .hero-meta .meta-divider { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+    @media (max-width: 720px) {
+      .hero-meta { position: static; justify-content: flex-start; flex-wrap: wrap; margin: 0 0 16px; text-align: left; }
+    }
+
+    .controls-panel, .panel { border: 1px solid var(--line); background: linear-gradient(160deg, rgba(17, 36, 58, .94), rgba(10, 23, 38, .96)); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .controls-panel { padding: 20px; margin-bottom: 18px; }
+    .controls-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+    .controls-head p { color: var(--muted); font-size: 12px; margin-bottom: 0; }
+    .reset-btn { border: 1px solid var(--line); color: var(--text); background: rgba(255,255,255,.04); padding: 8px 13px; border-radius: 9px; font-size: 12px; transition: .2s ease; }
+    .reset-btn:hover { border-color: var(--blue); background: rgba(67,165,255,.12); }
+    .control-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .control-card { background: rgba(7, 17, 31, .45); border: 1px solid rgba(36, 66, 95, .72); border-radius: 14px; padding: 16px; }
+    .control-card label { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; font-weight: 650; margin-bottom: 13px; }
+    .control-card output { color: var(--text); font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; accent-color: var(--blue); }
+    input[type="range"]:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+    select { width: 100%; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 9px; font-size: 12px; }
+    select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+    .range-scale { display: flex; justify-content: space-between; color: var(--muted-2); font-size: 10px; margin-top: 5px; }
+    .segmented { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 3px; }
+    .segmented button { flex: 1 1 120px; min-width: 110px; border: 1px solid var(--line); border-radius: 9px; padding: 9px 8px; color: var(--muted); background: rgba(255,255,255,.025); font-size: 12px; transition: .2s ease; }
+    .segmented button[aria-pressed="true"] { color: var(--text); border-color: var(--cyan); background: rgba(111,231,225,.13); box-shadow: inset 0 0 0 1px rgba(111,231,225,.16); }
+    .segmented button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+    /* ---- Platform navigation ---- */
+    .app-nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 18px; border: 1px solid var(--line); background: rgba(7,17,31,.42); padding: 6px; border-radius: 14px; box-shadow: var(--shadow); }
+    .app-nav button { flex: 1 1 200px; border: 1px solid transparent; border-radius: 11px; padding: 12px 15px; color: var(--muted); background: transparent; text-align: left; transition: .2s ease; }
+    .app-nav .nav-title { display: block; font-size: 13.5px; font-weight: 800; letter-spacing: -.01em; }
+    .app-nav .nav-sub { display: block; font-size: 11px; font-weight: 500; color: var(--muted-2); margin-top: 3px; }
+    .app-nav button[aria-selected="true"] { color: var(--text); border-color: var(--cyan); background: rgba(111,231,225,.12); box-shadow: inset 0 0 0 1px rgba(111,231,225,.15); }
+    .app-nav button[aria-selected="true"] .nav-sub { color: var(--cyan); }
+    .app-nav button:disabled { opacity: .55; cursor: not-allowed; }
+    .app-nav button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+    .module-panel[hidden] { display: none !important; }
+    .module-panel { animation: rise .28s ease both; }
+    .module-intro { color: var(--muted); font-size: 13px; max-width: 860px; margin: 2px 0 18px; }
+    .module-intro strong { color: var(--text); }
+
+    /* ---- Scenario Builder ---- */
+    .sb-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .sb-full { grid-column: 1 / -1; }
+    .sb-note { color: var(--muted-2); font-size: 11px; margin-top: 8px; }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .metric-card { min-height: 118px; padding: 17px; border: 1px solid var(--line); border-radius: 15px; background: rgba(13,27,44,.85); }
+    .metric-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; font-weight: 750; }
+    .metric-value { margin: 11px 0 3px; font-size: 28px; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+    .metric-note { color: var(--muted-2); font-size: 11px; }
+    .metric-card.primary { border-color: rgba(67,165,255,.46); background: linear-gradient(145deg, rgba(28,83,132,.45), rgba(13,27,44,.9)); }
+    .metric-card.primary .metric-value { color: var(--blue); }
+    .metric-card.accent .metric-value { color: var(--cyan); }
+    .metric-card.good .metric-value { color: var(--green); }
+    .metric-card.warn .metric-value { color: var(--amber); }
+    .tib { font-size: 0.82em; font-weight: 600; color: #ffffff; opacity: .85; }
+    .metric-value .tib { font-size: 0.5em; margin-left: 2px; }
+
+    .main-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(340px, .85fr); gap: 18px; align-items: start; }
+    .panel { padding: 20px; }
+    .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+    .panel-kicker { color: var(--muted-2); font-size: 11px; }
+    .status-pill { white-space: nowrap; border: 1px solid rgba(105,211,145,.36); color: var(--green); background: rgba(105,211,145,.1); padding: 6px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+    .status-pill.warn { border-color: rgba(255,200,87,.4); color: var(--amber); background: rgba(255,200,87,.1); }
+    .status-pill.bad { border-color: rgba(255,127,135,.45); color: var(--red); background: rgba(255,127,135,.1); }
+    .capacity-head-actions { display: flex; align-items: flex-end; gap: 12px; }
+    .capacity-view-toggle { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.025); }
+    .capacity-view-toggle button { border: 0; border-radius: 6px; padding: 5px 8px; color: var(--muted); background: transparent; font-size: 10px; font-weight: 750; }
+    .capacity-view-toggle button[aria-pressed="true"] { color: var(--text); background: rgba(111,231,225,.14); box-shadow: inset 0 0 0 1px rgba(111,231,225,.18); }
+    .capacity-view-toggle button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+    #capacity-bars-view[hidden], #capacity-donut-view[hidden], #capacity-formula-view[hidden] { display: none !important; }
+
+    .cluster-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; min-height: 220px; }
+    .node-card { border: 1px solid rgba(67,165,255,.27); border-radius: 13px; background: linear-gradient(180deg, rgba(20,47,75,.72), rgba(9,21,35,.72)); padding: 12px; animation: rise .25s ease both; }
+    .node-card.failed { border-color: rgba(255,127,135,.6); background: linear-gradient(180deg, rgba(75,20,28,.6), rgba(35,9,14,.7)); }
+    .node-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 9px; margin-bottom: 10px; border-bottom: 1px solid rgba(36,66,95,.66); }
+    .node-name { font-weight: 800; font-size: 12px; }
+    .node-index { color: var(--blue); font-size: 10px; font-weight: 800; }
+    .node-card.failed .node-index { color: var(--red); }
+    .node-meta { color: var(--muted); font-size: 10px; margin-bottom: 10px; }
+    .drive-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+    .drive-slot { height: 18px; border: 1px solid rgba(111,231,225,.35); border-radius: 4px; background: linear-gradient(145deg, rgba(111,231,225,.8), rgba(67,165,255,.38)); box-shadow: 0 0 8px rgba(111,231,225,.08); }
+    .drive-slot.dead { border-color: rgba(255,127,135,.6); background: rgba(255,127,135,.22); }
+    .drive-slot span { display: block; width: 3px; height: 3px; border-radius: 50%; margin: 6px auto; background: rgba(255,255,255,.78); }
+    .cluster-footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(36,66,95,.62); color: var(--muted); font-size: 12px; }
+    .cluster-footer strong { color: var(--text); }
+
+    .capacity-row { margin-bottom: 18px; }
+    .capacity-label { display: flex; justify-content: space-between; gap: 14px; font-size: 12px; margin-bottom: 7px; }
+    .capacity-label span:first-child { color: var(--muted); }
+    .capacity-label span:last-child { color: var(--text); font-weight: 750; font-variant-numeric: tabular-nums; }
+    .bar { height: 9px; border-radius: 99px; background: #091524; overflow: hidden; border: 1px solid rgba(36,66,95,.75); }
+    .bar-fill { height: 100%; border-radius: inherit; transition: width .35s ease; }
+    .bar-fill.raw { width: 100%; background: linear-gradient(90deg, var(--blue), #7ec4ff); }
+    .bar-fill.reserve { background: linear-gradient(90deg, var(--amber), #ffe29a); }
+    .bar-fill.metadata { background: var(--purple); }
+    .bar-fill.overhead { background: linear-gradient(90deg, var(--red), #ffb0a7); }
+    .bar-fill.infra { background: linear-gradient(90deg, #8a7cff, var(--purple)); }
+    .bar-fill.perf { background: linear-gradient(90deg, #5f7fb0, #8fa9d6); }
+    .bar-fill.workload { background: linear-gradient(90deg, var(--cyan), var(--green)); }
+    .bar-fill.usable { background: linear-gradient(90deg, var(--cyan), var(--green)); }
+    .bar-fill.volume { background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+    .bar-fill.headroom { background: linear-gradient(90deg, var(--muted-2), var(--muted)); }
+    .capacity-note { color: var(--muted-2); font-size: 11px; margin-top: 6px; }
+    .volume-plan-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .volume-plan-summary { margin-top: 14px; }
+    .volume-plan-list { display: grid; gap: 7px; margin-top: 14px; }
+    .volume-plan-row { display: grid; grid-template-columns: 110px 1fr minmax(170px, auto) 96px; gap: 10px; align-items: center; padding: 9px 11px; border: 1px solid rgba(36,66,95,.62); border-radius: 10px; background: rgba(7,17,31,.28); font-size: 11px; }
+    .volume-plan-row strong { color: var(--text); }
+    .volume-plan-row span { color: var(--muted); }
+    .volume-plan-row .volume-owner { color: var(--cyan); }
+    .volume-plan-row .volume-size { color: var(--text); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .volume-plan-row .volume-share { color: var(--muted-2); text-align: right; font-variant-numeric: tabular-nums; }
+    @media (max-width: 760px) { .volume-plan-controls { grid-template-columns: 1fr; } .volume-plan-row { grid-template-columns: 1fr 1fr; } .volume-plan-row .volume-size, .volume-plan-row .volume-share { text-align: left; } }
+    .insight { display: flex; gap: 11px; border: 1px solid rgba(255,200,87,.26); background: rgba(255,200,87,.07); border-radius: 12px; padding: 12px; margin-top: 22px; }
+    .insight-mark { color: var(--amber); font-weight: 900; font-size: 16px; line-height: 1; }
+    .insight p { color: var(--muted); font-size: 12px; margin: 0; }
+    .insight strong { color: var(--text); }
+
+    .detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+    .detail-tile { background: rgba(7,17,31,.42); border: 1px solid rgba(36,66,95,.65); border-radius: 12px; padding: 12px; }
+    .detail-tile span { display: block; color: var(--muted-2); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+    .detail-tile strong { display: block; margin-top: 5px; font-size: 15px; font-variant-numeric: tabular-nums; }
+    .footer-note { color: var(--muted-2); font-size: 11px; margin-top: 18px; text-align: center; }
+
+    @keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .deep-dive { display: grid; gap: 18px; margin-top: 18px; }
+    .section-intro { color: var(--muted); font-size: 12px; max-width: 860px; margin-bottom: 18px; }
+    .section-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr); gap: 18px; }
+    .model-box { border: 1px solid rgba(36,66,95,.7); border-radius: 13px; background: rgba(7,17,31,.38); padding: 14px; }
+    .model-box h3 { color: var(--text); }
+    .formula { color: var(--muted); font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 10px; background: rgba(0,0,0,.16); border-radius: 9px; margin-top: 10px; }
+    .model-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .mini-control { border: 1px solid rgba(36,66,95,.68); border-radius: 11px; padding: 11px; background: rgba(7,17,31,.32); }
+    .mini-control label { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; margin-bottom: 7px; }
+    .mini-control output { color: var(--text); font-variant-numeric: tabular-nums; }
+    .flow-stack { display: grid; gap: 8px; margin-top: 8px; }
+    .flow-row { display: grid; grid-template-columns: 150px 1fr 84px; gap: 10px; align-items: center; font-size: 11px; }
+    .flow-row .flow-label { color: var(--muted); }
+    .flow-row .flow-value { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+    .flow-track { height: 10px; border-radius: 99px; background: #091524; border: 1px solid rgba(36,66,95,.75); overflow: hidden; }
+    .flow-fill { height: 100%; border-radius: inherit; min-width: 2px; transition: width .35s ease; }
+    .flow-fill.reservation { background: var(--amber); }
+    .flow-fill.pool { background: var(--blue); }
+    .flow-fill.metadata { background: var(--purple); }
+    .flow-fill.infra { background: #8a7cff; }
+    .flow-fill.perf { background: #5f7fb0; }
+    .flow-fill.usable { background: var(--green); }
+    .flow-fill.workload { background: var(--green); }
+    .placement-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; margin-top: 12px; }
+    .placement-card { border: 1px solid rgba(67,165,255,.24); border-radius: 10px; padding: 9px; background: rgba(20,47,75,.42); }
+    .placement-card.failed { border-color: rgba(255,127,135,.65); background: rgba(255,127,135,.08); }
+    .placement-card .placement-head { display: flex; justify-content: space-between; gap: 6px; color: var(--muted); font-size: 10px; margin-bottom: 7px; }
+    .placement-card strong { color: var(--text); }
+    .placement-bar { height: 7px; border-radius: 99px; background: #091524; overflow: hidden; }
+    .placement-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--cyan)); transition: width .3s ease; }
+    .placement-card.failed .placement-bar span { background: var(--red); }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted-2); font-size: 10px; margin-top: 11px; }
+    .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; background: var(--cyan); }
+    .legend i.fail { background: var(--red); }
+    .legend i.owner { background: var(--amber); }
+    .action-btn { border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px; color: var(--text); background: rgba(255,255,255,.04); font-size: 11px; }
+    .action-btn:hover { border-color: var(--cyan); background: rgba(111,231,225,.09); }
+    .action-btn.primary { border-color: rgba(67,165,255,.55); background: rgba(67,165,255,.14); }
+    .action-btn.danger { border-color: rgba(255,127,135,.5); background: rgba(255,127,135,.1); }
+    .action-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+    .button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .references { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .reference-item { border: 1px solid rgba(36,66,95,.68); border-radius: 11px; padding: 12px; background: rgba(7,17,31,.32); }
+    .reference-item a { color: var(--cyan); font-size: 12px; font-weight: 750; text-decoration: none; }
+    .reference-item a:hover { text-decoration: underline; }
+    .reference-item p { color: var(--muted); font-size: 11px; margin: 5px 0 0; }
+
+    .capacity-donut-wrap { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(200px, 1.1fr); gap: 18px; align-items: center; margin: 6px 0 4px; }
+    #capacity-donut { width: 100%; height: 260px; }
+    .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+    .donut-legend-row { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: center; padding: 7px 10px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); }
+    .donut-legend-row .swatch { width: 12px; height: 12px; border-radius: 3px; }
+    .donut-legend-row .legend-name { font-size: 12px; font-weight: 700; letter-spacing: .01em; }
+    .donut-legend-row .legend-note { display: block; font-weight: 500; opacity: .62; font-size: 10.5px; margin-top: 2px; }
+    .donut-legend-row .legend-value { font-size: 12px; font-weight: 800; text-align: right; white-space: nowrap; }
+    .donut-legend-row .legend-value .tib { display: block; font-weight: 500; opacity: .6; font-size: 10px; }
+    .donut-legend-row.raw-row { background: rgba(255,255,255,.05); }
+
+    /* ---- Resiliency Simulator ---- */
+    .verdict { display: flex; align-items: center; gap: 22px; border-radius: 16px; padding: 22px 26px; border: 1px solid var(--line); background: rgba(7,17,31,.4); margin-bottom: 4px; flex-wrap: wrap; }
+    .verdict-badge { width: 78px; height: 78px; border-radius: 50%; display: grid; place-items: center; font-size: 34px; font-weight: 900; border: 3px solid var(--line); flex: none; }
+    .verdict-copy { flex: 1; min-width: 240px; }
+    .verdict-q { font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted-2); font-weight: 800; }
+    .verdict-answer { font-size: clamp(26px, 3vw, 38px); font-weight: 900; letter-spacing: -.03em; margin: 4px 0 6px; }
+    .verdict-detail { color: var(--muted); font-size: 13px; margin: 0; }
+    .verdict.ok { border-color: rgba(105,211,145,.55); background: rgba(105,211,145,.08); }
+    .verdict.ok .verdict-badge { border-color: var(--ok); color: var(--ok); }
+    .verdict.ok .verdict-answer { color: var(--ok); }
+    .verdict.degraded { border-color: rgba(255,200,87,.55); background: rgba(255,200,87,.08); }
+    .verdict.degraded .verdict-badge { border-color: var(--warn); color: var(--warn); }
+    .verdict.degraded .verdict-answer { color: var(--warn); }
+    .verdict.bad { border-color: rgba(255,127,135,.55); background: rgba(255,127,135,.08); }
+    .verdict.bad .verdict-badge { border-color: var(--bad); color: var(--bad); }
+    .verdict.bad .verdict-answer { color: var(--bad); }
+
+    .res-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .82fr); gap: 18px; align-items: start; }
+    .chain { display: flex; flex-direction: column; align-items: center; }
+    .chain-node { width: 100%; max-width: 520px; border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; background: rgba(7,17,31,.4); transition: border-color .3s ease, background .3s ease; }
+    .chain-node .cn-name { font-weight: 800; font-size: 13px; }
+    .chain-node .cn-desc { color: var(--muted-2); font-size: 10.5px; margin-top: 2px; }
+    .cn-state { border-radius: 99px; padding: 4px 11px; font-size: 11px; font-weight: 800; white-space: nowrap; border: 1px solid var(--line); }
+    .chain-node.healthy { border-color: rgba(105,211,145,.5); background: rgba(105,211,145,.06); }
+    .chain-node.healthy .cn-state { color: var(--ok); border-color: rgba(105,211,145,.5); }
+    .chain-node.degraded { border-color: rgba(255,200,87,.5); background: rgba(255,200,87,.06); }
+    .chain-node.degraded .cn-state { color: var(--warn); border-color: rgba(255,200,87,.5); }
+    .chain-node.unavailable { border-color: rgba(255,127,135,.55); background: rgba(255,127,135,.07); }
+    .chain-node.unavailable .cn-state { color: var(--bad); border-color: rgba(255,127,135,.55); }
+    .chain-arrow { color: var(--muted-2); font-size: 18px; line-height: 1; height: 22px; display: grid; place-items: center; }
+    @keyframes chainpulse { 0% { transform: scale(1); } 40% { transform: scale(1.035); box-shadow: 0 0 0 4px rgba(111,231,225,.12); } 100% { transform: scale(1); } }
+    .chain-node.animate { animation: chainpulse .55s ease; }
+
+    .slab-vol { border: 1px solid rgba(36,66,95,.7); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: rgba(7,17,31,.34); }
+    .slab-vol-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 6px; }
+    .slab-vol-head strong { font-size: 12.5px; color: var(--cyan); }
+    .slab-vol-head .vol-owner { font-size: 10px; color: var(--muted-2); }
+    .slab-row { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: start; padding: 9px 0; border-top: 1px dashed rgba(36,66,95,.5); }
+    .slab-name { font-weight: 800; font-size: 12px; }
+    .slab-name .slab-status { display: block; font-size: 9.5px; font-weight: 600; margin-top: 3px; }
+    .slab-status.ok { color: var(--ok); } .slab-status.warn { color: var(--warn); } .slab-status.bad { color: var(--bad); }
+    .replica-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .replica { border: 1px solid rgba(67,165,255,.32); border-radius: 8px; padding: 5px 9px; font-size: 10.5px; background: rgba(20,47,75,.42); color: var(--text); }
+    .replica em { font-style: normal; color: var(--muted-2); display: block; font-size: 9px; }
+    .replica.parity { border-color: rgba(201,149,255,.5); background: rgba(201,149,255,.1); }
+    .replica.survive { border-color: rgba(105,211,145,.5); background: rgba(105,211,145,.08); }
+    .replica.lost { border-color: rgba(255,127,135,.6); background: rgba(255,127,135,.12); color: var(--bad); text-decoration: line-through; }
+    .slab-table { margin-top: 14px; overflow-x: auto; }
+    .slab-table-grid { min-width: 720px; display: grid; gap: 6px; }
+    .slab-table-row { display: grid; grid-template-columns: 82px repeat(var(--node-count), minmax(104px, 1fr)) minmax(150px, 1.2fr); gap: 6px; align-items: stretch; }
+    .slab-table-head { color: var(--muted-2); font-size: 9.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .slab-table-head > span { padding: 4px 6px; }
+    .slab-cell { min-height: 48px; padding: 6px; border: 1px solid rgba(36,66,95,.7); border-radius: 7px; background: rgba(7,17,31,.28); font-size: 10px; }
+    .slab-cell.empty { display: grid; place-items: center; color: var(--muted-2); opacity: .55; }
+    .slab-cell.copy { border-color: rgba(105,211,145,.42); background: rgba(105,211,145,.06); }
+    .slab-cell.has-loss { border-color: rgba(255,200,87,.5); background: rgba(255,200,87,.06); }
+    .slab-cell.all-lost { border-color: rgba(255,127,135,.65); background: rgba(255,127,135,.1); }
+    .slab-cell-token { display: block; line-height: 1.25; }
+    .slab-cell-token + .slab-cell-token { margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(36,66,95,.65); }
+    .slab-cell-token em { display: block; color: var(--muted-2); font-size: 9px; font-style: normal; }
+    .slab-cell-token.lost { color: var(--bad); text-decoration: line-through; }
+    .slab-cell-token.parity-token { color: var(--purple); }
+    .slab-outcome-cell { display: flex; align-items: center; padding: 6px 8px; font-size: 10px; font-weight: 700; }
+    .slab-outcome-cell.ok { color: var(--ok); }
+    .slab-outcome-cell.warn { color: var(--warn); }
+    .slab-outcome-cell.bad { color: var(--bad); }
+
+    .trace { display: flex; flex-direction: column; }
+    .trace-step { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: rgba(7,17,31,.4); font-size: 12px; }
+    .trace-step strong { color: var(--text); }
+    .trace-step .t-note { color: var(--muted-2); font-size: 10.5px; display: block; margin-top: 2px; }
+    .trace-step.ok { border-color: rgba(105,211,145,.45); }
+    .trace-step.warn { border-color: rgba(255,200,87,.45); }
+    .trace-step.bad { border-color: rgba(255,127,135,.5); }
+    .trace-step.head { border-color: var(--blue); background: rgba(67,165,255,.1); font-weight: 800; }
+    .trace-arrow { text-align: center; color: var(--muted-2); font-size: 15px; height: 20px; line-height: 20px; }
+
+    .decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .decision-chip { display: flex; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; font-size: 12px; align-items: center; }
+    .decision-chip .chip-state { font-weight: 800; }
+    .decision-chip.ok { border-color: rgba(105,211,145,.45); } .decision-chip.ok .chip-state { color: var(--ok); }
+    .decision-chip.warn { border-color: rgba(255,200,87,.45); } .decision-chip.warn .chip-state { color: var(--warn); }
+    .decision-chip.bad { border-color: rgba(255,127,135,.5); } .decision-chip.bad .chip-state { color: var(--bad); }
+    .decision-output { border-radius: 12px; padding: 16px; text-align: center; border: 1px solid var(--line); background: rgba(7,17,31,.4); display: flex; flex-direction: column; justify-content: center; }
+    .decision-output .out-verdict { font-size: 22px; font-weight: 900; letter-spacing: -.02em; }
+    .decision-output.ok { border-color: rgba(105,211,145,.5); background: rgba(105,211,145,.08); } .decision-output.ok .out-verdict { color: var(--ok); }
+    .decision-output.degraded { border-color: rgba(255,200,87,.5); background: rgba(255,200,87,.08); } .decision-output.degraded .out-verdict { color: var(--warn); }
+    .decision-output.bad { border-color: rgba(255,127,135,.5); background: rgba(255,127,135,.08); } .decision-output.bad .out-verdict { color: var(--bad); }
+    .reason-list { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+    .reason-list li { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: flex-start; }
+    .reason-list li::before { content: "✓"; color: var(--ok); font-weight: 900; }
+    .reason-list li.no::before { content: "✕"; color: var(--bad); }
+
+    .csv-flow { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
+    .csv-box { flex: 1 1 150px; border: 1px solid var(--line); border-radius: 11px; padding: 12px 14px; background: rgba(20,47,75,.42); }
+    .csv-box .csv-role { color: var(--muted-2); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+    .csv-box .csv-val { font-size: 15px; font-weight: 800; margin-top: 5px; }
+    .csv-box.owner .csv-val { color: var(--amber); }
+    .csv-box.coord .csv-val { color: var(--cyan); }
+    .csv-box.moved { border-color: rgba(255,200,87,.5); background: rgba(255,200,87,.08); }
+    .csv-arrow { align-self: center; color: var(--cyan); font-size: 20px; }
+
+    .rb-grid { display: grid; gap: 8px; margin-top: 6px; }
+    .rb-node { display: grid; grid-template-columns: 66px 1fr 84px; gap: 10px; align-items: center; font-size: 11px; }
+    .rb-node .rb-label { color: var(--muted); font-weight: 700; }
+    .rb-track { height: 16px; border-radius: 6px; background: #091524; border: 1px solid rgba(36,66,95,.75); overflow: hidden; position: relative; display: flex; }
+    .rb-fill { height: 100%; background: linear-gradient(90deg, var(--blue), var(--cyan)); transition: width .5s ease; }
+    .rb-fill.add { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+    .rb-fill.move { background: linear-gradient(90deg, var(--amber), var(--green)); }
+    .rb-node .rb-val { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+    .rb-node.failed .rb-track { border-color: rgba(255,127,135,.6); }
+    .rb-node.failed .rb-label { color: var(--red); }
+    .rb-node.newnode .rb-label { color: var(--green); }
+    .phase-tag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted-2); margin: 12px 0 4px; }
+
+    .future-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .future-card { border: 1px dashed rgba(67,165,255,.35); border-radius: 14px; padding: 18px; background: rgba(7,17,31,.3); }
+    .future-card h3 { color: var(--text); font-size: 14px; }
+    .future-card p { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+    .future-card .soon { display: inline-block; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; font-size: 10px; font-weight: 800; color: var(--cyan); background: rgba(111,231,225,.08); text-transform: uppercase; letter-spacing: .08em; }
+    .arch-note { border: 1px solid rgba(67,165,255,.3); border-radius: 12px; padding: 14px 16px; background: rgba(67,165,255,.06); color: var(--muted); font-size: 12px; margin-top: 16px; }
+    .arch-note strong { color: var(--text); }
+
+    @media (max-width: 1050px) { .main-grid, .res-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) {
+      .page-shell { padding: 22px 16px 34px; }
+      .control-grid, .metric-grid, .sb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .model-controls, .references, .decision-grid { grid-template-columns: 1fr; }
+      .cluster-footer { flex-direction: column; gap: 5px; }
+      .app-nav button { flex: 1 1 100%; }
+    }
+    @media (max-width: 480px) {
+      .control-grid, .metric-grid, .detail-grid, .sb-grid { grid-template-columns: 1fr; }
+      h1 { font-size: 34px; }
+      .flow-row { grid-template-columns: 116px 1fr 70px; }
+    }
+    @media (max-width: 720px) { .capacity-donut-wrap { grid-template-columns: 1fr; } }
+
+    @media print {
+      body { margin: 0; padding: 0.4in 0.6in; background: #fff; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .page-shell, .main-grid, .res-grid { max-width: 100% !important; width: 100% !important; }
+      .app-nav, .reset-btn, .button-row, button, [role="button"] { display: none !important; }
+      .module-panel[hidden] { display: block !important; }
+      section, .panel, .verdict, .model-box { break-inside: avoid; margin-bottom: 16px !important; }
+      [class*="chart"], #capacity-donut { break-inside: avoid; height: 260px !important; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+</head>
+
+<body>
+  <div class="page-shell">
+    <header class="hero" data-glean-id="page-header">
+      <div class="hero-meta" data-glean-id="artifact-meta" aria-label="Artifact version and contact">
+        <span class="meta-label">Version</span><strong>v1.0.0</strong>
+        <span class="meta-divider" aria-hidden="true"></span>
+        <span class="meta-label">Contact</span><a href="mailto:andri.ahmad@dell.com">Andri Junardi Ahmad</a>
+      </div>
+      <div class="eyebrow">Storage Spaces Direct</div>
+      <h1>Storage Spaces Direct Explorer.</h1>
+      <p class="lede">The Storage Spaces Direct Explorer is an interactive modeling platform for planning and reasoning about Azure Local and Windows Server S2D clusters. It unifies two complementary disciplines on a shared configuration model: <strong>Capacity Planning</strong> quantifies how raw media translates into usable workload capacity after metadata, repair reserves, resiliency overhead, and system volumes, while the <strong>Resiliency Simulator</strong> demonstrates how cluster quorum, pool quorum, slab placement, and CSV ownership determine whether workloads remain available through node and drive failures. Every module draws from the same Scenario Builder, so cluster assumptions stay consistent across capacity, resiliency, and volume planning. It is intended as a design-time education and pre-sales tool, not a substitute for validated product sizing.</p>
+    </header>
+
+    <nav class="app-nav" role="tablist" aria-label="Explorer modules" data-glean-id="module-nav">
+      <button role="tab" id="tab-capacity" aria-selected="true" aria-controls="module-capacity" data-module="capacity">
+        <span class="nav-title">Capacity Planning</span>
+        <span class="nav-sub">How much storage capacity do I have?</span>
+      </button>
+      <button role="tab" id="tab-resiliency" aria-selected="false" aria-controls="module-resiliency" data-module="resiliency">
+        <span class="nav-title">Resiliency Simulator</span>
+        <span class="nav-sub">Can my VM remain online after a failure?</span>
+      </button>
+      <button role="tab" id="tab-future" aria-selected="false" aria-controls="module-future" data-module="future">
+        <span class="nav-title">Future Modules</span>
+        <span class="nav-sub">Workload &amp; performance simulators</span>
+      </button>
+    </nav>
+
+    <!-- ===================== SHARED SCENARIO BUILDER ===================== -->
+    <section class="controls-panel" data-glean-id="scenario-builder" aria-labelledby="scenario-builder-title">
+      <div class="controls-head">
+        <div>
+          <h2 id="scenario-builder-title">Scenario Builder</h2>
+          <p>Single source of truth for cluster configuration and capacity assumptions. Failure injection and recovery controls live in the Resiliency Simulator.</p>
+        </div>
+        <button class="reset-btn" id="reset-btn" type="button">Reset scenario</button>
+      </div>
+      <div class="sb-grid">
+        <div class="control-card" data-glean-id="sb-node-count">
+          <label for="nodes-range"><span>Node count</span><output id="nodes-output">4 nodes</output></label>
+          <input id="nodes-range" type="range" min="2" max="16" value="4" step="1" aria-label="Node count" />
+          <div class="range-scale"><span>2</span><span>16</span></div>
+        </div>
+        <div class="control-card" data-glean-id="sb-drive-count">
+          <label for="drives-range"><span>Drives per node</span><output id="drives-output">8 drives</output></label>
+          <input id="drives-range" type="range" min="4" max="24" value="8" step="1" aria-label="Drives per node" />
+          <div class="range-scale"><span>4</span><span>24</span></div>
+        </div>
+        <div class="control-card" data-glean-id="sb-drive-size">
+          <label for="drive-size-range"><span>Drive size</span><output id="drive-size-output">1.92 TB</output></label>
+          <input id="drive-size-range" type="range" min="0" max="5" value="0" step="1" aria-label="Drive size" />
+          <div class="range-scale"><span>1.92 TB</span><span>15.36 TB</span></div>
+        </div>
+        <div class="control-card" data-glean-id="sb-metadata">
+          <label for="metadata-overhead-range"><span>Metadata overhead</span><output id="metadata-overhead-output">1.0%</output></label>
+          <input id="metadata-overhead-range" type="range" min="0.5" max="1.0" value="1.0" step="0.1" aria-label="Storage Spaces metadata overhead percentage" />
+          <div class="range-scale"><span>0.5%</span><span>1.0%</span></div>
+        </div>
+
+        <div class="control-card sb-full" data-glean-id="sb-resiliency">
+          <label><span>Resiliency type</span><output id="resiliency-output">2-way mirror</output></label>
+          <div class="segmented" role="group" aria-label="Resiliency type">
+            <button type="button" data-resiliency="mirror2" aria-pressed="true">2-way mirror</button>
+            <button type="button" data-resiliency="mirror3" aria-pressed="false">3-way mirror</button>
+            <button type="button" data-resiliency="parity" aria-pressed="false">Dual parity (+LRC)</button>
+            <button type="button" data-resiliency="map" aria-pressed="false">Mirror-accelerated parity</button>
+          </div>
+          <div class="mini-control" id="parity-mix-control" data-glean-id="sb-parity-mix" style="display:none; margin-top:12px;">
+            <label for="parity-mix-range"><span>Mirror-accelerated parity mix</span><output id="parity-mix-output">50% mirror / 50% parity</output></label>
+            <input id="parity-mix-range" type="range" min="0" max="100" value="50" step="5" aria-label="Percentage of 3-way mirror in the mirror-accelerated parity mix" />
+            <div class="range-scale"><span>0% mirror</span><span>100% mirror</span></div>
+            <div class="metric-note">Modeled efficiency: <strong id="parity-mix-factor">41.7%</strong>. <span id="parity-mix-formula">mirror share × 33.3% + parity share × 50.0%.</span></div>
+          </div>
+          <div class="sb-note">Mirror-accelerated parity and dual parity require 4+ nodes. Dual-parity efficiency follows the Microsoft fault-domain summary tiers.</div>
+        </div>
+
+        <div class="control-card" data-glean-id="sb-infra-reserve">
+          <label for="infra-reserve-select"><span>Infrastructure Volume reserve</span><output id="infra-reserve-output">256 GiB</output></label>
+          <select id="infra-reserve-select" aria-label="Azure Local Infrastructure Volume reserve">
+            <option value="0">None (Windows Server)</option>
+            <option value="256" selected>256 GiB (Azure Local default)</option>
+            <option value="512">512 GiB</option>
+          </select>
+          <div class="sb-note">ARB / MOC / AKS appliance volume.</div>
+        </div>
+        <div class="control-card" data-glean-id="sb-perf-history">
+          <label for="perf-history-select"><span>Cluster Performance History</span><output id="perf-history-output">20 GiB</output></label>
+          <select id="perf-history-select" aria-label="Cluster Performance History reserve">
+            <option value="0">Disabled</option>
+            <option value="20" selected>20 GiB (default)</option>
+            <option value="40">40 GiB</option>
+          </select>
+          <div class="sb-note">Time-series health database.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== MODULE 1: CAPACITY PLANNING ===================== -->
+    <div class="module-panel" id="module-capacity" role="tabpanel" aria-labelledby="tab-capacity" data-glean-id="module-capacity">
+      <p class="module-intro"><strong>Capacity Planning.</strong> Size storage, analyze efficiency, and drive Azure Local sizing, presales, and ROI conversations. Raw capacity is reduced by metadata, the S2D repair reserve, resiliency overhead, the Azure Local Infrastructure Volume, and Cluster Performance History to reach workload capacity.</p>
+
+      <section class="metric-grid" data-glean-id="summary-metrics" aria-label="Cluster summary metrics">
+        <div class="metric-card primary" data-glean-id="metric-total-drives">
+          <div class="metric-label">Total drives</div>
+          <div class="metric-value" id="total-drives">32</div>
+          <div class="metric-note">Across the cluster</div>
+        </div>
+        <div class="metric-card accent" data-glean-id="metric-raw-capacity">
+          <div class="metric-label">Raw capacity</div>
+          <div class="metric-value" id="raw-capacity">61.44 TB <span class="tib">/ 55.88 TiB</span></div>
+          <div class="metric-note">Before resiliency overhead</div>
+        </div>
+        <div class="metric-card good" data-glean-id="metric-usable-capacity">
+          <div class="metric-label">Usable workload capacity</div>
+          <div class="metric-value" id="usable-capacity">26.58 TB <span class="tib">/ 24.17 TiB</span></div>
+          <div class="metric-note">After reserves + resiliency</div>
+        </div>
+        <div class="metric-card warn" data-glean-id="metric-fault-domains">
+          <div class="metric-label">Fault domains</div>
+          <div class="metric-value" id="fault-domains">4</div>
+          <div class="metric-note">One domain per node</div>
+        </div>
+      </section>
+
+      <div class="main-grid">
+        <section class="panel" data-glean-id="cluster-topology-panel" aria-labelledby="topology-title">
+          <div class="panel-head">
+            <div><div class="panel-kicker">Live topology view</div><h2 id="topology-title">Cluster topology</h2></div>
+            <div class="status-pill" id="topology-status">Healthy layout</div>
+          </div>
+          <div class="cluster-grid" id="cluster-grid" aria-live="polite"></div>
+          <div class="cluster-footer">
+            <span>Configuration: <strong id="configuration-summary">4 nodes × 8 drives</strong></span>
+            <span>Resiliency: <strong id="configuration-resiliency">2-way mirror</strong></span>
+          </div>
+        </section>
+
+        <section class="panel" data-glean-id="capacity-panel" aria-labelledby="capacity-title">
+          <div class="panel-head">
+            <div><div class="panel-kicker">Sizing view</div><h2 id="capacity-title">Capacity impact</h2></div>
+            <div class="capacity-head-actions">
+              <div class="capacity-view-toggle" role="group" aria-label="Capacity visualization">
+                <button type="button" id="capacity-bars-btn" aria-pressed="true">Bars</button>
+                <button type="button" id="capacity-donut-btn" aria-pressed="false">Donut</button>
+                <button type="button" id="capacity-formula-btn" aria-pressed="false">Formula</button>
+              </div>
+              <div class="panel-kicker" id="efficiency-label">43% workload-ready</div>
+            </div>
+          </div>
+          <div id="capacity-bars-view" data-glean-id="capacity-bars-view">
+            <div class="capacity-row"><div class="capacity-label"><span>Raw capacity</span><span id="raw-capacity-bars-label">61.44 TB</span></div><div class="bar"><div class="bar-fill raw" style="width:100%"></div></div><div class="capacity-note">Total media across all drives.</div></div>
+            <div class="capacity-row"><div class="capacity-label"><span>Storage Spaces metadata</span><span id="metadata-capacity-bars-label">0.61 TB</span></div><div class="bar"><div class="bar-fill metadata" id="capacity-bar-metadata"></div></div><div class="capacity-note">Estimated pool and filesystem metadata.</div></div>
+            <div class="capacity-row"><div class="capacity-label"><span>S2D repair reserve</span><span id="reserve-capacity-bars-label">7.68 TB</span></div><div class="bar"><div class="bar-fill reserve" id="capacity-bar-reserve"></div></div><div class="capacity-note">One drive per node held for repair.</div></div>
+            <div class="capacity-row"><div class="capacity-label"><span>Resiliency overhead</span><span id="overhead-capacity-bars-label">26.88 TB</span></div><div class="bar"><div class="bar-fill overhead" id="capacity-bar-overhead"></div></div><div class="capacity-note">Used by mirror copies or parity.</div></div>
+            <div class="capacity-row"><div class="capacity-label"><span>Azure Local Infrastructure Volume</span><span id="infra-capacity-bars-label">0.27 TB</span></div><div class="bar"><div class="bar-fill infra" id="capacity-bar-infra"></div></div><div class="capacity-note">ARB / MOC / AKS appliance reserve.</div></div>
+            <div class="capacity-row"><div class="capacity-label"><span>Cluster Performance History</span><span id="perf-capacity-bars-label">0.02 TB</span></div><div class="bar"><div class="bar-fill perf" id="capacity-bar-perf"></div></div><div class="capacity-note">Time-series health database.</div></div>
+            <div class="capacity-row"><div class="capacity-label"><span>Workload capacity</span><span id="usable-capacity-bars-label">26.58 TB</span></div><div class="bar"><div class="bar-fill workload" id="capacity-bar-workload"></div></div><div class="capacity-note">After every reserve and resiliency.</div></div>
+            <div class="capacity-row"><div class="capacity-label"><span>Planned user volumes</span><span id="planned-volume-capacity-bars-label">21.26 TB</span></div><div class="bar"><div class="bar-fill volume" id="capacity-bar-volumes"></div></div><div class="capacity-note">Targeted user-volume occupancy of usable workload capacity.</div></div>
+            <div class="capacity-row" style="margin-bottom:0;"><div class="capacity-label"><span>Unallocated headroom</span><span id="volume-headroom-bars-label">5.32 TB</span></div><div class="bar"><div class="bar-fill headroom" id="capacity-bar-headroom"></div></div><div class="capacity-note">Remaining usable capacity below the planning target.</div></div>
+          </div>
+          <div class="capacity-donut-wrap" id="capacity-donut-view" data-glean-id="capacity-donut-view" hidden>
+            <div id="capacity-donut" role="img" aria-label="Storage usage breakdown donut chart."></div>
+            <div class="donut-legend">
+              <div class="donut-legend-row raw-row" data-glean-id="raw-capacity-bar"><span class="swatch" style="background: var(--cyan);"></span><span class="legend-name">Raw capacity<span class="legend-note">Total media across all drives.</span></span><span class="legend-value" id="raw-capacity-bar-label">61.44 TB</span></div>
+              <div class="donut-legend-row" data-glean-id="metadata-capacity-bar"><span class="swatch" style="background: var(--purple);"></span><span class="legend-name">Metadata<span class="legend-note">Pool and filesystem metadata.</span></span><span class="legend-value" id="metadata-capacity-bar-label">0.61 TB</span></div>
+              <div class="donut-legend-row" data-glean-id="reserve-capacity-bar"><span class="swatch" style="background: var(--amber);"></span><span class="legend-name">S2D repair reserve<span class="legend-note">One drive per node.</span></span><span class="legend-value" id="reserve-capacity-bar-label">7.68 TB</span></div>
+              <div class="donut-legend-row" data-glean-id="resiliency-overhead-bar"><span class="swatch" style="background: var(--red);"></span><span class="legend-name">Resiliency overhead<span class="legend-note">Mirror copies or parity.</span></span><span class="legend-value" id="overhead-capacity-bar-label">26.88 TB</span></div>
+              <div class="donut-legend-row" data-glean-id="system-capacity-bar"><span class="swatch" style="background: #8a7cff;"></span><span class="legend-name">Azure Local reserves<span class="legend-note">Infrastructure + performance history.</span></span><span class="legend-value" id="system-capacity-bar-label">0.30 TB</span></div>
+              <div class="donut-legend-row" data-glean-id="usable-capacity-bar"><span class="swatch" style="background: var(--green);"></span><span class="legend-name">Workload capacity<span class="legend-note">After reserves and resiliency.</span></span><span class="legend-value" id="usable-capacity-bar-label">26.58 TB</span></div>
+            </div>
+          </div>
+          <div id="capacity-formula-view" data-glean-id="capacity-formula-view" hidden>
+            <div class="formula" id="capacity-formula"></div>
+          </div>
+          <div class="detail-grid" data-glean-id="planning-details">
+            <div class="detail-tile"><span>Copies / encoding</span><strong id="copy-count">2×</strong></div>
+            <div class="detail-tile"><span>Raw / node</span><strong id="raw-per-node">15.36 TB</strong></div>
+            <div class="detail-tile"><span>Storage efficiency</span><strong id="storage-efficiency">43%</strong></div>
+          </div>
+          <div class="insight" data-glean-id="planning-insight"><div class="insight-mark">!</div><p id="insight-copy"><strong>Planning note:</strong> Directional model. Validate usable capacity against the selected release and hardware.</p></div>
+        </section>
+      </div>
+
+      <section class="panel" data-glean-id="volume-planning-panel" aria-labelledby="volume-planning-title" style="margin-bottom:18px;">
+        <div class="panel-head">
+          <div><div class="panel-kicker">User volume planning</div><h2 id="volume-planning-title">Align volumes to ownership and usable capacity</h2></div>
+          <div class="status-pill" id="volume-alignment-pill">Aligned to nodes</div>
+        </div>
+        <p class="section-intro">A common planning pattern is one user volume per node so the volume count aligns with the cluster’s owner distribution. The target controls how much of usable workload capacity is assigned to user volumes, preserving the remaining percentage as headroom.</p>
+        <div class="volume-plan-controls">
+          <div class="mini-control" data-glean-id="volume-count-control">
+            <label for="user-volume-count-range"><span>User volume count</span><output id="user-volume-count-output">4 volumes</output></label>
+            <input id="user-volume-count-range" type="range" min="1" max="16" value="4" step="1" aria-label="User volume count" />
+            <div class="range-scale"><span>1</span><span>16</span></div>
+            <div class="sb-note" id="volume-count-note">Recommended: 4 volumes for 4 node owners.</div>
+          </div>
+          <div class="mini-control" data-glean-id="volume-target-control">
+            <label for="user-volume-target-range"><span>Usable-capacity target</span><output id="user-volume-target-output">80%</output></label>
+            <input id="user-volume-target-range" type="range" min="70" max="100" value="80" step="5" aria-label="Percentage of usable workload capacity assigned to user volumes" />
+            <div class="range-scale"><span>70%</span><span>100%</span></div>
+            <div class="sb-note">The balance remains as unallocated planning headroom.</div>
+          </div>
+        </div>
+        <div class="detail-grid volume-plan-summary" data-glean-id="volume-planning-summary">
+          <div class="detail-tile"><span>Planned user capacity</span><strong id="planned-volume-capacity">21.26 TB</strong></div>
+          <div class="detail-tile"><span>Per-volume capacity</span><strong id="per-volume-capacity">5.32 TB</strong></div>
+          <div class="detail-tile"><span>Remaining headroom</span><strong id="volume-headroom">5.32 TB</strong></div>
+        </div>
+        <div class="volume-plan-list" id="volume-plan-list" aria-label="User volume ownership plan"></div>
+        <div class="sb-note" id="volume-planning-note">Equal-sized planning model. Volume 01 maps to Node 01, Volume 02 to Node 02, and so on.</div>
+      </section>
+
+    </div>
+
+    <!-- ===================== MODULE 2: RESILIENCY SIMULATOR ===================== -->
+    <div class="module-panel" id="module-resiliency" role="tabpanel" aria-labelledby="tab-resiliency" data-glean-id="module-resiliency" hidden>
+      <p class="module-intro"><strong>Resiliency Simulator.</strong> An educational view of <strong>why data stays available</strong>. Cluster quorum, pool quorum, volume resiliency, slab copies, CSV ownership, VM availability, rebuild, and rebalance are kept deliberately distinct — the answer to the core question is derived from all of them.</p>
+
+      <section class="panel" data-glean-id="resiliency-scenario-controls" aria-labelledby="resiliency-controls-title" style="margin-bottom:18px;">
+        <div class="panel-head"><div><div class="panel-kicker">Resiliency scenario</div><h2 id="resiliency-controls-title">Inject a failure and choose recovery</h2></div><div class="status-pill">Simulator controls</div></div>
+        <p class="section-intro">These controls are intentionally separate from the shared cluster configuration. They change the failure path, quorum outcomes, slab survival, and VM-accessibility decision without changing the capacity model. Use <strong>Node + drive failure</strong> to model one failed node plus a drive fault on a different surviving node.</p>
+        <div class="sb-grid">
+          <div class="control-card" data-glean-id="resiliency-failure-scenario">
+            <label for="failure-scenario-select"><span>Failure scenario</span><output id="failure-scenario-output">None</output></label>
+            <select id="failure-scenario-select" aria-label="Failure scenario">
+              <option value="none" selected>None</option>
+              <option value="node">Node failure</option>
+              <option value="multinode">Multiple node failure</option>
+              <option value="drive">Drive failure</option>
+              <option value="node_drive">Node + drive failure (different nodes)</option>
+              <option value="owner">Volume owner failure</option>
+            </select>
+            <div class="mini-control" id="failure-count-control" data-glean-id="resiliency-multiple-node-count" style="display:none; margin-top:10px;">
+              <label for="failure-count-select"><span>Nodes failing</span><output id="failure-count-output">2</output></label>
+              <select id="failure-count-select" aria-label="Number of simultaneous node failures">
+                <option value="2" selected>2 nodes</option>
+                <option value="3">3 nodes</option>
+                <option value="4">4 nodes</option>
+              </select>
+            </div>
+          </div>
+          <div class="control-card" data-glean-id="resiliency-recovery-mode">
+            <label for="recovery-mode-select"><span>Recovery mode</span><output id="recovery-mode-output">None</output></label>
+            <select id="recovery-mode-select" aria-label="Recovery mode">
+              <option value="none" selected>None</option>
+              <option value="rebuild">Rebuild (restore protection)</option>
+              <option value="rebalance">Rebalance (redistribute placement)</option>
+            </select>
+            <div class="sb-note">Rebuild ≠ rebalance. Rebuild restores protection; rebalance redistributes placement.</div>
+            <div class="sb-note" style="margin-top:8px;">Combined-fault example: one node fails, then one drive on a surviving node fails. In a 3-node cluster, 3-way mirror can retain a replica while 2-way mirror can lose data.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" data-glean-id="vm-verdict-panel" aria-labelledby="vm-verdict-title" style="margin-bottom:18px;">
+        <div class="verdict" id="vm-verdict">
+          <div class="verdict-badge" id="verdict-badge">?</div>
+          <div class="verdict-copy">
+            <div class="verdict-q" id="vm-verdict-title">Can the VM still run?</div>
+            <div class="verdict-answer" id="verdict-answer">YES — VM remains accessible</div>
+            <p class="verdict-detail" id="verdict-detail">No failure injected. All modeled paths available.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="res-grid">
+        <section class="panel" data-glean-id="dependency-chain-panel" aria-labelledby="chain-title">
+          <div class="panel-head"><div><div class="panel-kicker">Dependency chain</div><h2 id="chain-title">How availability is derived</h2></div><div class="status-pill" id="chain-pill">All healthy</div></div>
+          <p class="section-intro">State propagates downward. A break at any layer changes everything below it.</p>
+          <div class="chain" id="dependency-chain" aria-live="polite"></div>
+        </section>
+
+        <section class="panel" data-glean-id="decision-engine-panel" aria-labelledby="decision-title">
+          <div class="panel-head"><div><div class="panel-kicker">VM accessibility</div><h2 id="decision-title">Decision engine</h2></div></div>
+          <div class="decision-grid">
+            <div class="decision-inputs" id="decision-inputs"></div>
+            <div class="decision-output" id="decision-output"><div class="out-label" style="font-size:11px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.08em;">Output</div><div class="out-verdict" id="decision-verdict">VM Accessible</div></div>
+          </div>
+          <div style="margin-top:14px;"><div class="panel-kicker" style="margin-bottom:6px;">Reason</div><ul class="reason-list" id="decision-reasons"></ul></div>
+        </section>
+      </div>
+
+      <section class="panel" data-glean-id="failure-trace-panel" aria-labelledby="trace-title" style="margin-top:18px;">
+        <div class="panel-head"><div><div class="panel-kicker">Failure impact trace</div><h2 id="trace-title">Follow the failure, step by step</h2></div><div class="status-pill" id="trace-pill">No failure</div></div>
+        <div class="trace" id="failure-trace"></div>
+      </section>
+
+      <section class="panel" data-glean-id="slab-explorer-panel" aria-labelledby="slab-explorer-title" style="margin-top:18px;">
+        <div class="panel-head"><div><div class="panel-kicker">Slab placement explorer</div><h2 id="slab-explorer-title">What data exists where, and which copies survive</h2></div><div class="status-pill" id="slab-explorer-pill">Protected</div></div>
+        <p class="section-intro">Every volume uses the same fixed Node 01…Node N columns, so you can see the distribution rather than only a list of surviving replicas. A VM remains accessible only when every slab has a readable copy and cluster/pool quorum remain online; one lost slab is enough to stop the VHDX.</p>
+        <div id="slab-explorer"></div>
+        <div class="legend"><span><i class="survive" style="background:var(--green)"></i> surviving copy</span><span><i class="fail"></i> lost copy</span><span><i style="background:var(--purple)"></i> parity fragment</span></div>
+      </section>
+
+      <section class="panel" data-glean-id="csv-ownership-panel" aria-labelledby="csv-title" style="margin-top:18px;">
+        <div class="panel-head"><div><div class="panel-kicker">CSV ownership simulator</div><h2 id="csv-title">CSV ownership ≠ data placement</h2></div><div class="status-pill" id="csv-pill">Stable</div></div>
+        <p class="section-intro">The CSV owner (coordinator) is a logical role for metadata coordination. It can move on failover without moving a single byte of data. Ownership is independent of where slab replicas physically live.</p>
+        <div class="csv-flow" id="csv-flow"></div>
+        <div class="arch-note" id="csv-note"><strong>Key point:</strong> Coordinator redirection reroutes metadata I/O only. Data remains on its existing slab replicas regardless of which node owns the volume.</div>
+      </section>
+
+      <div class="res-grid" style="margin-top:18px;">
+        <section class="panel" data-glean-id="rebuild-panel" aria-labelledby="rebuild-title">
+          <div class="panel-head"><div><div class="panel-kicker">Rebuild simulator</div><h2 id="rebuild-title">Rebuild = restore protection</h2></div><div class="status-pill" id="rebuild-pill">Idle</div></div>
+          <p class="section-intro">Rebuild recreates the missing copies on surviving (or replacement) nodes so every slab is fully protected again.</p>
+          <span class="phase-tag">Before failure</span>
+          <div class="rb-grid" id="rebuild-before"></div>
+          <span class="phase-tag">After failure</span>
+          <div class="rb-grid" id="rebuild-after"></div>
+          <span class="phase-tag">After rebuild</span>
+          <div class="rb-grid" id="rebuild-done"></div>
+          <div class="detail-grid">
+            <div class="detail-tile"><span>Data to rebuild</span><strong id="rebuild-capacity">0.00 TB</strong></div>
+            <div class="detail-tile"><span>Estimated slabs</span><strong id="rebuild-slabs">0</strong></div>
+            <div class="detail-tile"><span>Protection status</span><strong id="rebuild-protection">Protected</strong></div>
+          </div>
+        </section>
+
+        <section class="panel" data-glean-id="rebalance-panel" aria-labelledby="rebalance-title">
+          <div class="panel-head"><div><div class="panel-kicker">Rebalance simulator</div><h2 id="rebalance-title">Rebalance = redistribute placement</h2></div><div class="status-pill" id="rebalance-pill">Idle</div></div>
+          <p class="section-intro">Rebalance evens out slab distribution across nodes (e.g., after adding capacity). It does not restore lost protection — that is rebuild's job.</p>
+          <span class="phase-tag">Current distribution</span>
+          <div class="rb-grid" id="rebalance-before"></div>
+          <span class="phase-tag">After rebalance</span>
+          <div class="rb-grid" id="rebalance-after"></div>
+          <div class="arch-note"><strong>Rebuild vs rebalance:</strong> rebuild restores redundancy after a fault; rebalance optimizes placement for even utilization. They are separate operations with separate triggers.</div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ===================== MODULE 3: FUTURE MODULES ===================== -->
+    <div class="module-panel" id="module-future" role="tabpanel" aria-labelledby="tab-future" data-glean-id="module-future" hidden>
+      <p class="module-intro"><strong>Future modules.</strong> The platform is built on a shared configuration model and a module registry, so new simulators plug into the same Scenario Builder without redesigning the application.</p>
+      <div class="future-grid" data-glean-id="future-grid">
+        <div class="future-card" data-glean-id="future-avd"><span class="soon">Planned</span><h3>AVD Workload Simulator</h3><p>Model Azure Virtual Desktop session hosts, profile storage, and IOPS against the shared cluster.</p></div>
+        <div class="future-card" data-glean-id="future-sql"><span class="soon">Planned</span><h3>SQL Workload Simulator</h3><p>Size SQL Server data/log placement, latency sensitivity, and resiliency for database workloads.</p></div>
+        <div class="future-card" data-glean-id="future-aks"><span class="soon">Planned</span><h3>AKS Storage Simulator</h3><p>Persistent volume sizing and resiliency for AKS on Azure Local.</p></div>
+        <div class="future-card" data-glean-id="future-perf"><span class="soon">Planned</span><h3>Storage Performance Simulator</h3><p>Model cache tiers, IOPS, and throughput ceilings across the topology.</p></div>
+        <div class="future-card" data-glean-id="future-axsizer"><span class="soon">Planned</span><h3>Dell AX Sizer Extensions</h3><p>Map the scenario to validated Dell AX node models and supported drive counts.</p></div>
+      </div>
+      <div class="arch-note"><strong>Future-ready architecture:</strong> each module registers with <code>Explorer.registerModule(id, api)</code> and subscribes to state via <code>Explorer.subscribe(fn)</code>. Adding a module means adding a tab, a panel, and a subscriber — the Scenario Builder stays the single source of truth.</div>
+    </div>
+
+    <!-- ===================== REFERENCES ===================== -->
+    <section class="panel" data-glean-id="references-section" aria-labelledby="references-title" style="margin-top:18px;">
+      <div class="panel-head"><div><div class="panel-kicker">Further reading</div><h2 id="references-title">Reference list &amp; tools</h2></div><div class="panel-kicker">Validate before design decisions</div></div>
+      <div class="references">
+        <div class="reference-item"><a href="https://learn.microsoft.com/en-us/windows-server/storage/storage-spaces/fault-tolerance#summary" target="_blank" rel="noopener">Microsoft — Fault tolerance &amp; storage efficiency summary</a><p>Mirror and dual-parity efficiency, fault tolerance, and minimum drives.</p></div>
+        <div class="reference-item"><a href="https://learn.microsoft.com/en-us/azure-stack/hci/concepts/quorum" target="_blank" rel="noopener">Microsoft — Cluster and pool quorum on Azure Local</a><p>Cluster quorum, storage-pool quorum, and witness context.</p></div>
+        <div class="reference-item"><a href="https://learn.microsoft.com/en-us/windows-server/storage/storage-spaces/storage-spaces-direct-overview" target="_blank" rel="noopener">Microsoft — Storage Spaces Direct overview</a><p>Architecture and deployment concepts.</p></div>
+        <div class="reference-item"><a href="https://learn.microsoft.com/en-us/windows-server/storage/storage-spaces/storage-repair-speed" target="_blank" rel="noopener">Microsoft — Configure Storage Spaces repair speed</a><p>Repair/rebuild speed controls.</p></div>
+        <div class="reference-item"><a href="https://learn.microsoft.com/en-us/powershell/module/storage/optimize-storagepool?view=windowsserver2025-ps" target="_blank" rel="noopener">Microsoft — Optimize-StoragePool</a><p>Rebalance/optimization is separate from repair/rebuild.</p></div>
+        <div class="reference-item"><a href="https://azure.github.io/odinforazurelocal/s2d-calc/" target="_blank" rel="noopener">ODIN for Azure Local — S2D Calculator</a><p>Community capacity/resiliency calculator to cross-check sizing.</p></div>
+        <div class="reference-item"><a href="https://azurelocal.cloud/azurelocal-surveyor" target="_blank" rel="noopener">Azure Local Surveyor</a><p>Survey and document an existing environment.</p></div>
+        <div class="reference-item"><a href="https://azurelocal.cloud/azurelocal-s2d-cartographer" target="_blank" rel="noopener">Azure Local S2D Cartographer</a><p>Map and visualize a Storage Spaces Direct layout.</p></div>
+      </div>
+      <div class="insight" data-glean-id="platform-disclaimer"><div class="insight-mark">!</div><p><strong>Important:</strong> This platform is a discussion and learning model. Quorum, placement, ownership, rebuild, rebalance, capacity, and performance behavior must be validated against the intended product release, topology, workload, and tested configuration.</p></div>
+    </section>
+
+    <p class="footer-note" data-glean-id="page-disclaimer">Directional model only — not a product quote, validated bill of materials, or deployment design.</p>
+  </div>
+
+  <script>
+  /* ===================== SHARED ENGINE (single source of truth) ===================== */
+  const Explorer = (() => {
+    const DRIVE_SIZES = [1.92, 3.2, 3.84, 6.4, 7.68, 15.36];
+    const RESILIENCY = {
+      mirror2: { label: '2-way mirror', copies: 2, factor: 0.5, ft: 1, minNodes: 2, kind: 'mirror' },
+      mirror3: { label: '3-way mirror', copies: 3, factor: 1 / 3, ft: 2, minNodes: 3, kind: 'mirror' },
+      parity:  { label: 'Dual parity + LRC', copies: 4, factor: 0.5, ft: 2, minNodes: 4, kind: 'parity' },
+      map:     { label: 'Mirror-accelerated parity', copies: 3, factor: 1 / 3, ft: 2, minNodes: 4, kind: 'map' }
+    };
+    const state = {
+      nodes: 4, drives: 8, driveIndex: 0, resiliency: 'mirror2',
+      metadataPct: 1.0, infraGiB: 256, perfGiB: 20, parityMix: 50,
+      volumeCount: 4, volumeTargetPct: 80,
+      failure: 'none', failureCount: 2, recovery: 'none', capacityView: 'bars'
+    };
+    const subscribers = [];
+    const modules = {};
+    const GiBtoTB = (giB) => giB * 1.073741824 / 1000;
+    const driveSize = () => DRIVE_SIZES[Math.min(DRIVE_SIZES.length - 1, state.driveIndex)];
+    const dualParityFactor = (fd) => { fd = Math.max(4, fd || 4); if (fd >= 16) return 0.8; if (fd >= 9) return 0.75; if (fd >= 7) return 2 / 3; return 0.5; };
+
+    function profile() {
+      const base = RESILIENCY[state.resiliency] || RESILIENCY.mirror2;
+      const p = Object.assign({}, base, { mode: state.resiliency });
+      if (state.resiliency === 'parity') { p.factor = dualParityFactor(state.nodes); }
+      if (state.resiliency === 'map') {
+        const m = state.parityMix / 100, d = 1 - m;
+        p.factor = m * (1 / 3) + d * dualParityFactor(state.nodes);
+        p.label = 'Mirror-accelerated parity (' + state.parityMix + '% mirror / ' + (100 - state.parityMix) + '% parity)';
+      }
+      return p;
+    }
+
+    function slabFragmentsFor(nodes, drives, p, slabIndex) {
+      const count = p.kind === 'parity' ? 4 : p.copies;
+      const roles = p.kind === 'parity' ? ['Data A', 'Data B', 'Parity P', 'Parity Q'] : Array.from({ length: count }, (_, i) => 'Replica ' + (i + 1));
+      return roles.map((role, i) => ({ role, node: ((slabIndex + i) % nodes) + 1, drive: ((slabIndex + i) % drives) + 1, parity: p.kind === 'parity' && i >= 2 }));
+    }
+
+    function placementPeriod(nodes, drives, p) {
+      const a = Math.max(1, nodes), b = Math.max(1, drives), c = Math.max(1, p.kind === 'parity' ? 4 : p.copies);
+      const gcd = (x, y) => y ? gcd(y, x % y) : x;
+      const lcm = (x, y) => Math.abs(x * y) / gcd(x, y);
+      return Math.max(1, lcm(lcm(a, b), c));
+    }
+
+    function failureModel(nodes, p, slabCount, slabTb) {
+      const type = state.failure;
+      const hasFailure = type !== 'none';
+      const combinedFault = type === 'node_drive';
+      const nodeFaults = type === 'node' || combinedFault ? 1 : type === 'multinode' ? Math.min(state.failureCount, nodes - 1) : 0;
+      const driveFault = type === 'drive' || combinedFault ? 1 : 0;
+      const ownerFault = type === 'owner';
+      const faults = nodeFaults + driveFault;
+      const tolerated = p.ft;
+      const availableNodes = nodes - nodeFaults;
+      const failedNodes = [];
+      for (let i = 1; i <= nodeFaults; i += 1) failedNodes.push(i);
+      // The combined scenario deliberately targets the next surviving node.
+      const driveNode = driveFault ? (combinedFault ? (nodes >= 2 ? 2 : 1) : 1) : null;
+      // Choose a stable pseudo-random slab whose placement contains both fault domains,
+      // then fail the actual drive used by that slab on the other node.
+      const anchorPeriod = driveFault && combinedFault ? Math.max(1, placementPeriod(nodes, state.drives, p)) : 0;
+      const anchorCandidates = [];
+      for (let slabIndex = 0; slabIndex < anchorPeriod; slabIndex += 1) {
+        const fragments = slabFragmentsFor(nodes, state.drives, p, slabIndex);
+        const hasNodeFault = failedNodes.some((node) => fragments.some((fr) => fr.node === node));
+        const driveFragment = fragments.find((fr) => fr.node === driveNode);
+        if (hasNodeFault && driveFragment) anchorCandidates.push({ slabIndex, drive: driveFragment.drive });
+      }
+      const anchorChoice = anchorCandidates.length ? anchorCandidates[(nodes * 11 + state.drives * 5) % anchorCandidates.length] : null;
+      const driveNumber = driveFault ? (combinedFault ? (anchorChoice ? anchorChoice.drive : 1) : 1) : null;
+      const anchorSlabIndex = combinedFault && anchorChoice ? anchorChoice.slabIndex : null;
+      const ownerNodeOriginal = 1;
+
+      // Cluster quorum: node votes + 1 witness
+      const totalVotes = nodes + 1;
+      const clusterMajority = Math.floor(totalVotes / 2) + 1;
+      const survivingClusterVotes = availableNodes + 1;
+      const clusterOk = survivingClusterVotes >= clusterMajority && availableNodes >= 1;
+      const clusterState = (!hasFailure || nodeFaults === 0) ? 'healthy' : (!clusterOk ? 'unavailable' : (survivingClusterVotes === clusterMajority ? 'degraded' : 'healthy'));
+
+      // Storage pool quorum: pool metadata across nodes + cluster DB tiebreaker
+      const poolSurviving = availableNodes + (clusterOk ? 1 : 0);
+      const poolOk = poolSurviving > nodes / 2 && availableNodes >= 1;
+      const poolMargin = poolSurviving - (Math.floor(nodes / 2) + 1);
+      const poolState = (!hasFailure || nodeFaults === 0) ? 'healthy' : (!poolOk ? 'unavailable' : (poolMargin <= 0 ? 'degraded' : 'healthy'));
+
+      // Evaluate actual representative slab placements. A volume is readable only
+      // when every slab retains a readable copy (or enough data fragments for parity).
+      const period = Math.min(Math.max(1, slabCount), placementPeriod(nodes, state.drives, p));
+      let affectedSamples = 0, unavailableSamples = 0, readableSamples = 0;
+      if (hasFailure && !ownerFault) {
+        for (let slabIndex = 0; slabIndex < period; slabIndex += 1) {
+          const fragments = slabFragmentsFor(nodes, state.drives, p, slabIndex);
+          const surviving = fragments.filter((fr) => !failedNodes.includes(fr.node) && !(driveFault && fr.node === driveNode && fr.drive === driveNumber));
+          const affected = surviving.length < fragments.length;
+          const readable = p.kind === 'parity' ? surviving.length >= 2 : surviving.length >= 1;
+          if (affected) affectedSamples += 1;
+          if (readable) readableSamples += 1;
+          else unavailableSamples += 1;
+        }
+      }
+      const scale = period > 0 ? slabCount / period : 0;
+      const affectedSlabs = Math.min(slabCount, Math.round(affectedSamples * scale));
+      const unavailableSlabs = Math.min(slabCount, Math.round(unavailableSamples * scale));
+      const readableSlabs = Math.max(0, affectedSlabs - unavailableSlabs);
+      let volState;
+      if (ownerFault || faults === 0) volState = 'healthy';
+      else if (unavailableSlabs > 0) volState = 'unavailable';
+      else volState = 'degraded';
+      const slabState = ownerFault || faults === 0 ? 'healthy' : (unavailableSlabs > 0 ? 'unavailable' : 'degraded');
+      const rebuildSlabs = affectedSlabs;
+      const rebuildCapacity = rebuildSlabs * slabTb;
+
+      // CSV availability
+      const csvOnline = clusterOk && poolOk && slabState !== 'unavailable';
+      let csvState;
+      if (!csvOnline) csvState = 'unavailable';
+      else if (ownerFault) csvState = 'degraded';
+      else if (clusterState === 'degraded' || poolState === 'degraded' || slabState === 'degraded') csvState = 'degraded';
+      else csvState = 'healthy';
+
+      // VM accessibility
+      const vmAccessible = csvOnline;
+      const vmState = !vmAccessible ? 'unavailable' : (csvState === 'degraded' ? 'degraded' : 'healthy');
+
+      // CSV ownership (logical role)
+      const ownerMoved = ownerFault || failedNodes.includes(ownerNodeOriginal);
+      let ownerNode = ownerNodeOriginal;
+      if (ownerMoved) { for (let n = 1; n <= nodes; n += 1) { if (!failedNodes.includes(n)) { ownerNode = n; break; } } }
+
+      return {
+        type, hasFailure, combinedFault, nodeFaults, driveFault: !!driveFault, ownerFault, faults, tolerated,
+        availableNodes, failedNodes, driveNode, driveNumber, anchorSlabIndex, ownerNodeOriginal, ownerNode, ownerMoved,
+        clusterOk, clusterState, survivingClusterVotes, clusterMajority, totalVotes,
+        poolOk, poolState, poolSurviving,
+        volState, slabState, csvState, csvOnline, vmAccessible, vmState,
+        affectedSlabs, readableSlabs, unavailableSlabs, rebuildSlabs, rebuildCapacity
+      };
+    }
+
+    function compute() {
+      const p = profile();
+      const nodes = state.nodes, drives = state.drives, ds = driveSize();
+      const raw = nodes * drives * ds;
+      const metadataPct = state.metadataPct / 100;
+      const metadataOverhead = raw * metadataPct;
+      const poolCapacity = Math.max(raw - metadataOverhead, 0);
+      const reserveDrives = Math.min(nodes, 4);
+      const repairReserve = Math.min(poolCapacity, reserveDrives * ds);
+      const afterReserve = Math.max(poolCapacity - repairReserve, 0);
+      const planning = afterReserve * p.factor;
+      const overhead = Math.max(afterReserve - planning, 0);
+      const infraTb = GiBtoTB(state.infraGiB);
+      const perfTb = GiBtoTB(state.perfGiB);
+      const systemReservation = infraTb + perfTb;
+      const workloadReady = Math.max(planning - systemReservation, 0);
+      const volumeCount = Math.max(1, Math.min(16, Number(state.volumeCount || nodes)));
+      const volumeTargetPct = Math.max(70, Math.min(100, Number(state.volumeTargetPct || 80)));
+      const plannedVolumeCapacity = workloadReady * volumeTargetPct / 100;
+      const perVolumeCapacity = volumeCount > 0 ? plannedVolumeCapacity / volumeCount : 0;
+      const volumeHeadroom = Math.max(workloadReady - plannedVolumeCapacity, 0);
+      const slabTb = 0.25 / 1024;
+      const slabCount = Math.floor(afterReserve / slabTb);
+      const remainder = Math.max(afterReserve - slabCount * slabTb, 0);
+      const efficiency = raw > 0 ? workloadReady / raw : 0;
+      const f = failureModel(nodes, p, slabCount, slabTb);
+      return {
+        p, nodes, drives, driveSize: ds, raw, metadataPct, metadataOverhead, poolCapacity,
+        reserveDrives, repairReserve, afterReserve, planning, overhead, infraTb, perfTb,
+        systemReservation, workloadReady, volumeCount, volumeTargetPct, plannedVolumeCapacity, perVolumeCapacity, volumeHeadroom,
+        slabTb, slabCount, remainder, efficiency,
+        copies: p.copies, factor: p.factor, label: p.label, mode: state.resiliency, f
+      };
+    }
+
+    function notify() { const model = compute(); subscribers.forEach((fn) => { try { fn(model, state); } catch (e) { console.error(e); } }); }
+    function update(patch) { Object.assign(state, patch || {}); notify(); }
+    function subscribe(fn) { subscribers.push(fn); }
+    function registerModule(id, api) { modules[id] = api; }
+    return { state, DRIVE_SIZES, RESILIENCY, driveSize, profile, compute, update, notify, subscribe, registerModule, modules, slabFragmentsFor, placementPeriod };
+  })();
+
+  /* ===================== SHARED FORMAT HELPERS ===================== */
+  const $ = (id) => document.getElementById(id);
+  const tb = (v) => v >= 1000 ? (v / 1000).toFixed(2) + ' PB' : v.toFixed(2) + ' TB';
+  const toTiB = (v) => v / 1.099511627776;
+  const toGiB = (v) => Math.round(v * 1000 / 1.073741824);
+  const tbTibHtml = (v) => tb(v) + ' <span class="tib">/ ' + toTiB(v).toFixed(2) + ' TiB</span>';
+  const tbGiB = (v) => tb(v) + ' / ' + toGiB(v).toLocaleString() + ' GiB';
+  const tbGiBHtml = (v) => tb(v) + ' <span class="tib">/ ' + toGiB(v).toLocaleString() + ' GiB</span>';
+  const whole = (v) => Math.round(v).toLocaleString();
+  const pct = (v) => Math.round(v) + '%';
+  const STATE_LABEL = { healthy: 'Healthy', degraded: 'Degraded', unavailable: 'Unavailable' };
+  const nn = (n) => 'Node ' + String(n).padStart(2, '0');
+  </script>
+
+  <script>
+  /* ===================== MODULE 1: CAPACITY PLANNING ===================== */
+  (() => {
+    let donut = null;
+    const themeVar = (name, fb) => { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v || fb; };
+
+    function renderTopology(m) {
+      const grid = $('cluster-grid'); if (!grid) return;
+      grid.innerHTML = '';
+      const failed = m.f.failedNodes;
+      for (let node = 1; node <= m.nodes; node += 1) {
+        const isFailed = failed.includes(node);
+        const card = document.createElement('article');
+        card.className = 'node-card' + (isFailed ? ' failed' : '');
+        card.dataset.gleanId = 'node-' + node;
+        card.style.animationDelay = Math.min(node * 0.025, 0.35) + 's';
+        let slots = '';
+        for (let d = 0; d < m.drives; d += 1) {
+          const dead = m.f.driveFault && m.f.driveNode === node && d + 1 === m.f.driveNumber;
+          slots += '<div class="drive-slot' + (dead ? ' dead' : '') + '"><span></span></div>';
+        }
+        card.innerHTML = '<div class="node-top"><span class="node-name">' + nn(node) + '</span><span class="node-index">' + (isFailed ? 'DOWN' : 'FD-' + node) + '</span></div><div class="node-meta">' + m.drives + ' data drives</div><div class="drive-grid">' + slots + '</div>';
+        grid.appendChild(card);
+      }
+      $('topology-status').textContent = m.nodes >= 2 ? (m.f.hasFailure ? 'Failure injected' : 'Healthy layout') : 'Review layout';
+    }
+
+    function renderDonut(m) {
+      const host = $('capacity-donut'); if (!host || typeof echarts === 'undefined') return;
+      if (!donut) donut = echarts.init(host, null, { renderer: 'svg' });
+      const textColor = themeVar('--text', '#ecf5ff'); const muted = themeVar('--muted', '#9aa4b8');
+      const segments = [
+        { name: 'Workload capacity', value: Math.max(m.workloadReady, 0), color: themeVar('--green', '#69d391') },
+        { name: 'Resiliency overhead', value: Math.max(m.overhead, 0), color: themeVar('--red', '#ff7f87') },
+        { name: 'Metadata', value: Math.max(m.metadataOverhead, 0), color: themeVar('--purple', '#c995ff') },
+        { name: 'S2D repair reserve', value: Math.max(m.repairReserve, 0), color: themeVar('--amber', '#ffc857') },
+        { name: 'Azure Local reserves', value: Math.max(m.systemReservation, 0), color: '#8a7cff' }
+      ];
+      const rawTb = Math.max(m.raw, 0.01);
+      donut.setOption({
+        tooltip: { trigger: 'item', formatter: (p) => p.name + '<br/><strong>' + tb(p.value) + '</strong> (' + pct(p.value / rawTb * 100) + ' of raw)' },
+        series: [{ type: 'pie', radius: ['58%', '86%'], center: ['50%', '50%'], avoidLabelOverlap: true,
+          itemStyle: { borderColor: themeVar('--panel', '#0f1524'), borderWidth: 2 },
+          label: { show: true, position: 'center', formatter: () => '{v|' + tb(m.raw) + '}\n{l|Raw capacity}', rich: { v: { fontSize: 20, fontWeight: 800, color: textColor, lineHeight: 26 }, l: { fontSize: 11, color: muted, fontWeight: 600 } } },
+          labelLine: { show: false },
+          data: segments.map((s) => ({ name: s.name, value: s.value, itemStyle: { color: s.color } })) }]
+      });
+      donut.resize();
+    }
+    window.addEventListener('resize', () => { if (donut) donut.resize(); });
+
+    function setView(view) {
+      Explorer.state.capacityView = view;
+      $('capacity-bars-view').hidden = view !== 'bars';
+      $('capacity-donut-view').hidden = view !== 'donut';
+      $('capacity-formula-view').hidden = view !== 'formula';
+      $('capacity-bars-btn').setAttribute('aria-pressed', view === 'bars');
+      $('capacity-donut-btn').setAttribute('aria-pressed', view === 'donut');
+      $('capacity-formula-btn').setAttribute('aria-pressed', view === 'formula');
+      if (view === 'donut' && donut) donut.resize();
+    }
+    $('capacity-bars-btn').addEventListener('click', () => setView('bars'));
+    $('capacity-donut-btn').addEventListener('click', () => setView('donut'));
+    $('capacity-formula-btn').addEventListener('click', () => setView('formula'));
+
+    function render(m) {
+      const rawBase = Math.max(m.raw, 0.01);
+      $('total-drives').textContent = m.nodes * m.drives;
+      $('raw-capacity').innerHTML = tbTibHtml(m.raw);
+      $('usable-capacity').innerHTML = tbTibHtml(m.workloadReady);
+      $('fault-domains').textContent = m.nodes;
+      $('configuration-summary').textContent = m.nodes + ' nodes × ' + m.drives + ' drives';
+      $('configuration-resiliency').textContent = m.label;
+      $('efficiency-label').textContent = pct(m.efficiency * 100) + ' workload-ready';
+      $('copy-count').textContent = m.p.kind === 'parity' ? 'Dual parity' : m.copies + '×';
+      $('raw-per-node').innerHTML = tbTibHtml(m.drives * m.driveSize);
+      $('storage-efficiency').textContent = pct(m.efficiency * 100);
+      $('user-volume-count-output').textContent = m.volumeCount + (m.volumeCount === 1 ? ' volume' : ' volumes');
+      $('user-volume-target-output').textContent = m.volumeTargetPct + '%';
+      $('planned-volume-capacity').innerHTML = tbTibHtml(m.plannedVolumeCapacity);
+      $('per-volume-capacity').innerHTML = tbGiBHtml(m.perVolumeCapacity);
+      $('volume-headroom').innerHTML = tbTibHtml(m.volumeHeadroom);
+      const aligned = m.volumeCount === m.nodes;
+      const alignmentPill = $('volume-alignment-pill');
+      alignmentPill.textContent = aligned ? 'Aligned to nodes' : m.volumeCount + ' volumes / ' + m.nodes + ' nodes';
+      alignmentPill.className = 'status-pill' + (aligned ? '' : ' warn');
+      $('volume-count-note').textContent = 'Recommended: ' + m.nodes + ' volume' + (m.nodes === 1 ? '' : 's') + ' for ' + m.nodes + ' node owners.';
+      $('volume-planning-note').textContent = aligned
+        ? 'Equal-sized planning model. Each volume maps one-to-one to a node owner.'
+        : 'Equal-sized planning model. Volume owners repeat after Node ' + String(m.nodes).padStart(2, '0') + '. Set volume count to ' + m.nodes + ' to align one-to-one with node owners.';
+      const volumeList = $('volume-plan-list'); volumeList.innerHTML = '';
+      for (let i = 1; i <= m.volumeCount; i += 1) {
+        const owner = ((i - 1) % m.nodes) + 1;
+        const row = document.createElement('div'); row.className = 'volume-plan-row'; row.dataset.gleanId = 'user-volume-' + i;
+        row.innerHTML = '<strong>Volume ' + String(i).padStart(2, '0') + '</strong><span class="volume-owner">Owner: Node ' + String(owner).padStart(2, '0') + '</span><span class="volume-size">' + tbGiB(m.perVolumeCapacity) + '</span><span class="volume-share">' + m.volumeTargetPct + '% plan</span>';
+        volumeList.appendChild(row);
+      }
+
+      const setBar = (id, val) => { const el = $(id); if (el) el.style.width = Math.max(1.5, Math.min(100, val / rawBase * 100)) + '%'; };
+      setBar('capacity-bar-metadata', m.metadataOverhead);
+      setBar('capacity-bar-reserve', m.repairReserve);
+      setBar('capacity-bar-overhead', m.overhead);
+      setBar('capacity-bar-infra', m.infraTb);
+      setBar('capacity-bar-perf', m.perfTb);
+      setBar('capacity-bar-workload', m.workloadReady);
+      setBar('capacity-bar-volumes', m.plannedVolumeCapacity);
+      setBar('capacity-bar-headroom', m.volumeHeadroom);
+      $('raw-capacity-bars-label').innerHTML = tbTibHtml(m.raw);
+      $('metadata-capacity-bars-label').innerHTML = tbTibHtml(m.metadataOverhead);
+      $('reserve-capacity-bars-label').innerHTML = tbTibHtml(m.repairReserve);
+      $('overhead-capacity-bars-label').innerHTML = tbTibHtml(m.overhead);
+      $('infra-capacity-bars-label').innerHTML = tbTibHtml(m.infraTb);
+      $('perf-capacity-bars-label').innerHTML = tbTibHtml(m.perfTb);
+      $('usable-capacity-bars-label').innerHTML = tbTibHtml(m.workloadReady);
+      $('planned-volume-capacity-bars-label').innerHTML = tbTibHtml(m.plannedVolumeCapacity);
+      $('volume-headroom-bars-label').innerHTML = tbTibHtml(m.volumeHeadroom);
+
+      $('raw-capacity-bar-label').innerHTML = tbTibHtml(m.raw);
+      $('metadata-capacity-bar-label').innerHTML = tbTibHtml(m.metadataOverhead);
+      $('reserve-capacity-bar-label').innerHTML = tbTibHtml(m.repairReserve);
+      $('overhead-capacity-bar-label').innerHTML = tbTibHtml(m.overhead);
+      $('system-capacity-bar-label').innerHTML = tbTibHtml(m.systemReservation);
+      $('usable-capacity-bar-label').innerHTML = tbTibHtml(m.workloadReady);
+
+      $('capacity-formula').innerHTML =
+        'Raw Capacity = ' + m.nodes + ' nodes × ' + m.drives + ' drives × ' + m.driveSize.toFixed(2) + ' TB = ' + tb(m.raw) + '<br>' +
+        'Metadata Overhead = ' + tb(m.raw) + ' × ' + (m.metadataPct * 100).toFixed(1) + '% = ' + tb(m.metadataOverhead) + '<br>' +
+        'Pool Capacity = ' + tb(m.raw) + ' − ' + tb(m.metadataOverhead) + ' = ' + tb(m.poolCapacity) + '<br>' +
+        'S2D Repair Reserve = min(' + m.nodes + ', 4) × ' + m.driveSize.toFixed(2) + ' TB = ' + tb(m.repairReserve) + '<br>' +
+        'After Reserve = ' + tb(m.poolCapacity) + ' − ' + tb(m.repairReserve) + ' = ' + tb(m.afterReserve) + '<br>' +
+        'Resiliency Capacity = ' + tb(m.afterReserve) + ' × ' + (m.factor * 100).toFixed(1) + '% = ' + tb(m.planning) + '<br>' +
+        'Azure Local Reserves = Infrastructure ' + tb(m.infraTb) + ' + Perf History ' + tb(m.perfTb) + ' = ' + tb(m.systemReservation) + '<br>' +
+        'Workload Capacity = ' + tb(m.planning) + ' − ' + tb(m.systemReservation) + ' = ' + tb(m.workloadReady) + '<br>' +
+        'User Volume Plan = ' + m.volumeCount + ' volumes × ' + tb(m.perVolumeCapacity) + ' = ' + tb(m.plannedVolumeCapacity) + ' (' + m.volumeTargetPct + '% target), leaving ' + tb(m.volumeHeadroom) + ' headroom';
+
+      renderTopology(m);
+      renderDonut(m);
+    }
+
+    Explorer.registerModule('capacity', { render });
+    Explorer.subscribe(render);
+    setView('bars');
+  })();
+  </script>
+
+  <script>
+  /* ===================== MODULE 2: RESILIENCY SIMULATOR ===================== */
+  (() => {
+    const copyNodes = (b, slabIndex, copies) => {
+      const primary = (slabIndex % b.nodes) + 1;
+      const list = [primary];
+      for (let i = 1; i < copies; i += 1) { const c = ((primary - 1 + i) % b.nodes) + 1; if (!list.includes(c)) list.push(c); if (list.length === b.nodes) break; }
+      return list;
+    };
+    const slabFragmentsFor = (nodes, drives, p, slabIndex) => Explorer.slabFragmentsFor(nodes, drives, p, slabIndex);
+    const placementPeriod = (nodes, drives, p) => Explorer.placementPeriod(nodes, drives, p);
+
+    function renderVerdict(f) {
+      const box = $('vm-verdict'); const badge = $('verdict-badge'); const ans = $('verdict-answer'); const det = $('verdict-detail');
+      box.classList.remove('ok', 'degraded', 'bad');
+      if (f.vmState === 'healthy') {
+        box.classList.add('ok'); badge.textContent = '✓'; ans.textContent = 'YES — VM remains accessible';
+        det.textContent = f.hasFailure ? 'Every slab still has a valid replica; cluster and pool quorum are retained.' : 'No failure injected. All modeled paths available.';
+      } else if (f.vmState === 'degraded') {
+        box.classList.add('degraded'); badge.textContent = '!'; ans.textContent = 'YES — but degraded / at risk';
+        det.textContent = f.ownerFault ? 'CSV ownership is moving; a brief metadata I/O pause, then access resumes. Data copies are unchanged.' : 'VM stays online but redundancy is reduced — no further failure can be tolerated until rebuild completes.';
+      } else {
+        box.classList.add('bad'); badge.textContent = '✕'; ans.textContent = 'NO — VM is inaccessible';
+        det.textContent = !f.clusterOk ? 'Failover cluster quorum was lost — the cluster service stops to protect data.' : (!f.poolOk ? 'Storage pool quorum was lost — the pool goes offline.' : 'Some slabs lost every replica — the volume cannot come online.');
+      }
+    }
+
+    function renderChain(f) {
+      const chain = $('dependency-chain'); if (!chain) return;
+      const layers = [
+        { name: 'Failover Cluster Quorum', desc: 'Node votes + witness majority', st: f.clusterState },
+        { name: 'Storage Pool Quorum', desc: 'Pool metadata + cluster DB tiebreaker', st: f.poolState },
+        { name: 'Volume Resiliency', desc: f.tolerated + '-fault tolerant (' + STATE_LABEL[f.volState].toLowerCase() + ')', st: f.volState },
+        { name: 'Slab Health', desc: 'Every slab keeps ≥1 readable copy', st: f.slabState },
+        { name: 'CSV Volume Availability', desc: 'Volume online for I/O', st: f.csvState },
+        { name: 'VM Accessibility', desc: 'Guest can read/write its VHDX', st: f.vmState }
+      ];
+      chain.innerHTML = '';
+      layers.forEach((l, i) => {
+        if (i > 0) { const a = document.createElement('div'); a.className = 'chain-arrow'; a.textContent = '↓'; chain.appendChild(a); }
+        const node = document.createElement('div');
+        node.className = 'chain-node ' + l.st + ' animate';
+        node.dataset.gleanId = 'chain-' + l.name.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
+        node.style.animationDelay = (i * 0.09) + 's';
+        node.innerHTML = '<div><div class="cn-name">' + l.name + '</div><div class="cn-desc">' + l.desc + '</div></div><div class="cn-state">' + STATE_LABEL[l.st] + '</div>';
+        chain.appendChild(node);
+      });
+      const worst = layers.some(l => l.st === 'unavailable') ? 'unavailable' : layers.some(l => l.st === 'degraded') ? 'degraded' : 'healthy';
+      const pill = $('chain-pill');
+      pill.textContent = worst === 'healthy' ? 'All healthy' : worst === 'degraded' ? 'Degraded' : 'Broken';
+      pill.className = 'status-pill' + (worst === 'degraded' ? ' warn' : worst === 'unavailable' ? ' bad' : '');
+    }
+
+    function renderDecision(f) {
+      const inputs = $('decision-inputs'); const out = $('decision-output'); const verdict = $('decision-verdict'); const reasons = $('decision-reasons');
+      const cls = (s) => s === 'healthy' ? 'ok' : s === 'degraded' ? 'warn' : 'bad';
+      const items = [
+        { label: 'Cluster quorum', st: f.clusterState, val: f.clusterOk ? 'Retained' : 'Lost' },
+        { label: 'Pool quorum', st: f.poolState, val: f.poolOk ? 'Online' : 'Offline' },
+        { label: 'Volume state', st: f.volState, val: STATE_LABEL[f.volState] },
+        { label: 'Replica availability', st: f.slabState, val: f.slabState === 'unavailable' ? 'Slabs lost' : (f.hasFailure && !f.ownerFault ? 'All readable' : 'Full') }
+      ];
+      inputs.innerHTML = '';
+      items.forEach((it) => { const d = document.createElement('div'); d.className = 'decision-chip ' + cls(it.st); d.innerHTML = '<span>' + it.label + '</span><span class="chip-state">' + it.val + '</span>'; inputs.appendChild(d); });
+      out.classList.remove('ok', 'degraded', 'bad');
+      out.classList.add(f.vmState === 'healthy' ? 'ok' : f.vmState === 'degraded' ? 'degraded' : 'bad');
+      verdict.textContent = f.vmAccessible ? 'VM Accessible' : 'VM Inaccessible';
+      const r = [];
+      r.push({ ok: f.clusterOk, t: f.clusterOk ? 'Cluster quorum maintained (' + f.survivingClusterVotes + '/' + f.clusterMajority + ' votes)' : 'Cluster quorum lost' });
+      r.push({ ok: f.poolOk, t: f.poolOk ? 'Pool quorum maintained' : 'Pool quorum lost' });
+      r.push({ ok: f.volState !== 'unavailable', t: f.volState === 'unavailable' ? 'Volume resiliency exceeded (' + f.faults + ' faults > ' + f.tolerated + ' tolerated)' : 'Volume resiliency within tolerance (' + f.faults + '/' + f.tolerated + ')' });
+      r.push({ ok: f.slabState !== 'unavailable', t: f.slabState === 'unavailable' ? 'Some slabs lost all replicas' : 'Every slab still has ≥1 valid replica' });
+      reasons.innerHTML = '';
+      r.forEach((x) => { const li = document.createElement('li'); if (!x.ok) li.className = 'no'; li.textContent = x.t; reasons.appendChild(li); });
+    }
+
+    function renderTrace(m) {
+      const f = m.f; const trace = $('failure-trace'); trace.innerHTML = '';
+      const pill = $('trace-pill');
+      const add = (cls, html) => { if (trace.children.length) { const a = document.createElement('div'); a.className = 'trace-arrow'; a.textContent = '↓'; trace.appendChild(a); } const s = document.createElement('div'); s.className = 'trace-step ' + cls; s.innerHTML = html; trace.appendChild(s); };
+      if (!f.hasFailure) {
+        pill.textContent = 'No failure'; pill.className = 'status-pill';
+        add('head', '<strong>No failure injected</strong><span class="t-note">All ' + m.nodes + ' nodes and every slab replica are available.</span>');
+        add('ok', '<strong>VM remains accessible</strong><span class="t-note">Cluster quorum, pool quorum, and all slab copies are healthy.</span>');
+        return;
+      }
+      const label = f.ownerFault ? 'Volume owner pause on ' + nn(f.ownerNodeOriginal)
+        : f.combinedFault ? f.failedNodes.map(nn).join(' + ') + ' failure + Drive ' + String(f.driveNumber).padStart(2, '0') + ' failure on ' + nn(f.driveNode)
+        : f.driveFault ? 'Drive ' + String(f.driveNumber).padStart(2, '0') + ' failure on ' + nn(f.driveNode)
+        : f.failedNodes.map(nn).join(' + ') + ' failure';
+      pill.textContent = f.vmAccessible ? (f.vmState === 'degraded' ? 'Degraded' : 'Survived') : 'VM offline';
+      pill.className = 'status-pill' + (f.vmAccessible ? (f.vmState === 'degraded' ? ' warn' : '') : ' bad');
+      add('head', '<strong>' + label + '</strong>');
+      if (f.ownerFault) {
+        add('warn', '<strong>CSV ownership moves ' + nn(f.ownerNodeOriginal) + ' → ' + nn(f.ownerNode) + '</strong><span class="t-note">Logical coordinator role only — no data moves.</span>');
+        add('ok', '<strong>All slab replicas unchanged</strong><span class="t-note">Data placement is independent of ownership.</span>');
+        add('ok', '<strong>Volume online</strong>');
+        add('ok', '<strong>VM remains accessible</strong><span class="t-note">Brief metadata I/O pause during coordinator redirection.</span>');
+        return;
+      }
+      add(f.affectedSlabs > 0 ? 'warn' : 'ok', '<strong>' + whole(f.affectedSlabs) + ' slabs affected</strong><span class="t-note">Slabs with a replica on the failed domain.</span>');
+      if (f.volState === 'unavailable') {
+        add('bad', '<strong>' + whole(f.unavailableSlabs) + ' slabs unavailable</strong><span class="t-note">Every replica of these slabs was on failed domains (' + f.faults + ' faults > ' + f.tolerated + ' tolerated).</span>');
+        add('bad', '<strong>Volume offline</strong>');
+        add(f.poolOk ? 'ok' : 'bad', '<strong>Storage pool quorum ' + (f.poolOk ? 'retained' : 'LOST') + '</strong>');
+        add(f.clusterOk ? 'ok' : 'bad', '<strong>Cluster quorum ' + (f.clusterOk ? 'retained' : 'LOST') + '</strong>');
+        add('bad', '<strong>VM inaccessible</strong>');
+      } else {
+        add('ok', '<strong>' + whole(f.readableSlabs) + ' slabs still readable</strong><span class="t-note">Surviving replicas keep every slab online.</span>');
+        add('ok', '<strong>Volume online</strong>');
+        add(f.poolState === 'degraded' ? 'warn' : 'ok', '<strong>Storage pool quorum retained</strong>');
+        add(f.clusterState === 'degraded' ? 'warn' : 'ok', '<strong>Cluster quorum retained</strong>');
+        add(f.vmState === 'degraded' ? 'warn' : 'ok', '<strong>VM remains accessible</strong>' + (f.vmState === 'degraded' ? '<span class="t-note">Degraded — rebuild needed to restore full protection.</span>' : ''));
+      }
+    }
+
+    function renderSlabExplorer(m) {
+      const f = m.f; const host = $('slab-explorer'); host.innerHTML = '';
+      const volumes = Math.min(3, Math.max(1, Math.ceil(m.nodes / 2)));
+      const slabLetters = ['A', 'B', 'C', 'D'];
+      const sampleIndices = [0, 1, 2];
+      // Pull a representative affected or lost slab into view during a fault.
+      if (f.hasFailure) {
+        if (f.combinedFault && Number.isInteger(f.anchorSlabIndex)) {
+          // Show the exact slab used to select the failed drive so both losses are visible.
+          sampleIndices[2] = f.anchorSlabIndex;
+        } else {
+          const period = Math.min(200, Math.max(1, placementPeriod(m.nodes, m.drives, m.p)));
+          for (let i = 0; i < period; i += 1) {
+            const frags = slabFragmentsFor(m.nodes, m.drives, m.p, i);
+            const lost = frags.filter((fr) => f.failedNodes.includes(fr.node) || (f.driveFault && f.driveNode === fr.node && fr.drive === f.driveNumber)).length;
+            const readable = m.p.kind === 'parity' ? frags.length - lost >= 2 : frags.length - lost >= 1;
+            if (!readable || lost > 0) { sampleIndices[2] = i; break; }
+          }
+        }
+      }
+      for (let v = 0; v < volumes; v += 1) {
+        const vol = document.createElement('div'); vol.className = 'slab-vol'; vol.dataset.gleanId = 'slab-vol-' + (v + 1);
+        const ownerNode = ((v) % m.nodes) + 1;
+        const shownOwner = (f.ownerMoved && ownerNode === f.ownerNodeOriginal) ? f.ownerNode : ownerNode;
+        vol.innerHTML = '<div class="slab-vol-head"><strong>Volume ' + String(v + 1).padStart(2, '0') + '</strong><span class="vol-owner">CSV owner: ' + nn(shownOwner) + ' · ' + m.nodes + ' node fault-domain view</span></div>';
+        const table = document.createElement('div'); table.className = 'slab-table';
+        const grid = document.createElement('div'); grid.className = 'slab-table-grid'; grid.style.setProperty('--node-count', m.nodes);
+        const head = document.createElement('div'); head.className = 'slab-table-row slab-table-head';
+        head.innerHTML = '<span>Slab</span>' + Array.from({ length: m.nodes }, (_, i) => '<span>' + nn(i + 1) + '</span>').join('') + '<span>Result</span>';
+        grid.appendChild(head);
+        for (let s = 0; s < 3; s += 1) {
+          const slabIndex = v * 4 + (s === 2 ? sampleIndices[2] : sampleIndices[s]);
+          const fragments = slabFragmentsFor(m.nodes, m.drives, m.p, slabIndex);
+          const byNode = Array.from({ length: m.nodes }, () => []);
+          let lostCount = 0;
+          fragments.forEach((fr) => {
+            const lost = f.failedNodes.includes(fr.node) || (f.driveFault && f.driveNode === fr.node && fr.drive === f.driveNumber);
+            if (lost) lostCount += 1;
+            byNode[fr.node - 1].push({ ...fr, lost });
+          });
+          const survived = fragments.length - lostCount;
+          const readable = m.p.kind === 'parity' ? survived >= 2 : survived >= 1;
+          const row = document.createElement('div'); row.className = 'slab-table-row';
+          let cells = '<span class="slab-label">Slab ' + slabLetters[s] + '</span>';
+          byNode.forEach((nodeFragments) => {
+            if (!nodeFragments.length) { cells += '<span class="slab-cell empty">—</span>'; return; }
+            const allLost = nodeFragments.every((fr) => fr.lost);
+            const hasLoss = nodeFragments.some((fr) => fr.lost);
+            const cellClass = allLost ? 'all-lost' : hasLoss ? 'has-loss' : 'copy';
+            const tokens = nodeFragments.map((fr) => '<span class="slab-cell-token ' + (fr.lost ? 'lost' : '') + (fr.parity ? ' parity-token' : '') + '">' + fr.role + '<em>Drive ' + String(fr.drive).padStart(2, '0') + (fr.lost ? ' · lost' : ' · survives') + '</em></span>').join('');
+            cells += '<span class="slab-cell ' + cellClass + '">' + tokens + '</span>';
+          });
+          const status = !readable ? 'NO READABLE COPY' : lostCount ? 'Readable · degraded' : 'Readable · full';
+          const statusClass = !readable ? 'bad' : lostCount ? 'warn' : 'ok';
+          cells += '<span class="slab-outcome-cell ' + statusClass + '">' + status + '<br><small>' + survived + '/' + fragments.length + ' fragments</small></span>';
+          row.innerHTML = cells; grid.appendChild(row);
+        }
+        table.appendChild(grid); vol.appendChild(table); host.appendChild(vol);
+      }
+      const pill = $('slab-explorer-pill');
+      pill.textContent = f.slabState === 'unavailable' ? 'Slabs lost' : f.slabState === 'degraded' ? 'Degraded' : 'Protected';
+      pill.className = 'status-pill' + (f.slabState === 'degraded' ? ' warn' : f.slabState === 'unavailable' ? ' bad' : '');
+    }
+
+    function renderCsv(m) {
+      const f = m.f; const flow = $('csv-flow'); flow.innerHTML = '';
+      const boxes = [
+        { role: 'CSV Volume', val: 'Volume 01', cls: '' },
+        { role: 'Owner node', val: nn(f.ownerNode), cls: 'owner' + (f.ownerMoved ? ' moved' : '') },
+        { role: 'Current coordinator', val: nn(f.ownerNode) + ' (metadata)', cls: 'coord' + (f.ownerMoved ? ' moved' : '') }
+      ];
+      boxes.forEach((b, i) => {
+        if (i > 0) { const a = document.createElement('div'); a.className = 'csv-arrow'; a.textContent = '→'; flow.appendChild(a); }
+        const el = document.createElement('div'); el.className = 'csv-box ' + b.cls;
+        el.innerHTML = '<div class="csv-role">' + b.role + '</div><div class="csv-val">' + b.val + '</div>';
+        flow.appendChild(el);
+      });
+      const pill = $('csv-pill');
+      pill.textContent = f.ownerMoved ? 'Owner moved' : 'Stable';
+      pill.className = 'status-pill' + (f.ownerMoved ? ' warn' : '');
+      $('csv-note').innerHTML = f.ownerMoved
+        ? '<strong>Failover:</strong> ownership moved to ' + nn(f.ownerNode) + ' via coordinator redirection. Not one slab replica moved — <strong>CSV ownership ≠ data placement.</strong>'
+        : '<strong>Key point:</strong> coordinator redirection reroutes metadata I/O only. Data stays on its existing slab replicas regardless of which node owns the volume.';
+    }
+
+    function nodeBars(hostId, rows, phase) {
+      const host = $(hostId); host.innerHTML = '';
+      const max = Math.max.apply(null, rows.map(r => r.value).concat([1]));
+      rows.forEach((r) => {
+        const el = document.createElement('div');
+        el.className = 'rb-node' + (r.failed ? ' failed' : '') + (r.newnode ? ' newnode' : '');
+        const w = r.failed ? 100 : Math.max(4, r.value / max * 100);
+        const fillCls = r.failed ? '' : phase === 'add' && r.added ? 'add' : phase === 'move' && r.moved ? 'move' : '';
+        const val = r.failed ? 'FAILED' : whole(r.value) + ' slabs';
+        el.innerHTML = '<span class="rb-label">' + r.label + '</span><div class="rb-track">' + (r.failed ? '<div class="rb-fill" style="width:100%;background:var(--red)"></div>' : '<div class="rb-fill ' + fillCls + '" style="width:' + w + '%"></div>') + '</div><span class="rb-val">' + val + '</span>';
+        host.appendChild(el);
+      });
+    }
+
+    function renderRebuildRebalance(m) {
+      const f = m.f;
+      const totalPlacements = m.slabCount * m.copies;
+      const perNodeBefore = m.nodes > 0 ? totalPlacements / m.nodes : 0;
+      // Before failure
+      const before = []; for (let n = 1; n <= m.nodes; n += 1) before.push({ label: nn(n), value: perNodeBefore });
+      nodeBars('rebuild-before', before, 'base');
+      // After failure
+      const survivors = Math.max(1, m.nodes - f.nodeFaults);
+      const after = []; for (let n = 1; n <= m.nodes; n += 1) { const failed = f.failedNodes.includes(n); after.push({ label: nn(n), value: failed ? 0 : totalPlacements * (f.hasFailure && !f.ownerFault && !f.driveFault ? 1 : 1) / survivors, failed: failed }); }
+      nodeBars('rebuild-after', after, 'base');
+      // After rebuild (redistributes onto survivors + a replacement node if nodes failed)
+      const done = [];
+      if (f.nodeFaults > 0 && f.volState !== 'unavailable') {
+        const targetNodes = survivors + f.nodeFaults; // replacement node(s) added back
+        for (let n = 1; n <= m.nodes; n += 1) { if (f.failedNodes.includes(n)) continue; done.push({ label: nn(n), value: totalPlacements / targetNodes, added: true }); }
+        for (let r = 0; r < f.nodeFaults; r += 1) done.push({ label: nn(m.nodes + 1 + r) + ' (new)', value: totalPlacements / targetNodes, added: true, newnode: true });
+      } else {
+        for (let n = 1; n <= m.nodes; n += 1) { if (f.failedNodes.includes(n)) continue; done.push({ label: nn(n), value: perNodeBefore, added: f.hasFailure }); }
+      }
+      nodeBars('rebuild-done', done, 'add');
+      $('rebuild-capacity').textContent = tb(f.rebuildCapacity);
+      $('rebuild-slabs').textContent = whole(f.rebuildSlabs);
+      const rp = $('rebuild-pill');
+      const protLabel = !f.hasFailure ? 'Protected' : f.volState === 'unavailable' ? 'Cannot rebuild' : (m.state && m.state.recovery === 'rebuild') ? 'Rebuild active' : 'Rebuild pending';
+      $('rebuild-protection').textContent = f.volState === 'unavailable' ? 'Data loss' : (!f.hasFailure ? 'Fully protected' : 'Restoring');
+      rp.textContent = Explorer.state.recovery === 'rebuild' && f.hasFailure ? 'Rebuild active' : (f.hasFailure && f.volState !== 'unavailable' ? 'Rebuild pending' : (f.volState === 'unavailable' ? 'Cannot rebuild' : 'Idle'));
+      rp.className = 'status-pill' + (f.volState === 'unavailable' ? ' bad' : (f.hasFailure ? ' warn' : ''));
+
+      // Rebalance: current uneven -> even (independent of failure/protection)
+      const rbBefore = []; for (let n = 1; n <= m.nodes; n += 1) { const skew = 1 + (n % 3 === 0 ? 0.5 : n % 2 === 0 ? -0.25 : 0.1); rbBefore.push({ label: nn(n), value: perNodeBefore * skew }); }
+      nodeBars('rebalance-before', rbBefore, 'base');
+      const rbAfter = []; for (let n = 1; n <= m.nodes; n += 1) rbAfter.push({ label: nn(n), value: perNodeBefore, moved: true });
+      nodeBars('rebalance-after', rbAfter, 'move');
+      const rbp = $('rebalance-pill');
+      rbp.textContent = Explorer.state.recovery === 'rebalance' ? 'Rebalance active' : 'Idle';
+      rbp.className = 'status-pill' + (Explorer.state.recovery === 'rebalance' ? ' warn' : '');
+    }
+
+    function render(m) {
+      const f = m.f;
+      renderVerdict(f);
+      renderChain(f);
+      renderDecision(f);
+      renderTrace(m);
+      renderSlabExplorer(m);
+      renderCsv(m);
+      renderRebuildRebalance(m);
+    }
+
+    Explorer.registerModule('resiliency', { render });
+    Explorer.subscribe(render);
+  })();
+  </script>
+
+  <script>
+  /* ===================== SCENARIO BUILDER WIRING + NAV ===================== */
+  (() => {
+    const defaults = { nodes: 4, drives: 8, driveIndex: 0, resiliency: 'mirror2', metadataPct: 1.0, infraGiB: 256, perfGiB: 20, parityMix: 50, volumeCount: 4, volumeTargetPct: 80, failure: 'none', failureCount: 2, recovery: 'none' };
+
+    function syncScenarioOutputs(m, state) {
+      $('nodes-output').textContent = state.nodes + (state.nodes === 1 ? ' node' : ' nodes');
+      $('drives-output').textContent = state.drives + (state.drives === 1 ? ' drive' : ' drives');
+      $('drive-size-output').textContent = Explorer.driveSize().toFixed(2) + ' TB';
+      $('user-volume-count-range').value = state.volumeCount;
+      $('user-volume-target-range').value = state.volumeTargetPct;
+      $('metadata-overhead-output').textContent = state.metadataPct.toFixed(1) + '%';
+      $('resiliency-output').textContent = m.label;
+      $('infra-reserve-output').textContent = state.infraGiB + ' GiB';
+      $('perf-history-output').textContent = state.perfGiB + ' GiB';
+      $('failure-scenario-output').textContent = $('failure-scenario-select').selectedOptions[0].textContent;
+      $('recovery-mode-output').textContent = $('recovery-mode-select').selectedOptions[0].textContent;
+      // parity mix visibility
+      const showMix = state.resiliency === 'map';
+      $('parity-mix-control').style.display = showMix ? 'block' : 'none';
+      if (showMix) {
+        const mm = state.parityMix, dd = 100 - mm;
+        $('parity-mix-output').textContent = mm + '% mirror / ' + dd + '% parity';
+        $('parity-mix-factor').textContent = (m.factor * 100).toFixed(1) + '%';
+        const pf = ((m.factor - (mm/100)*(1/3)) / Math.max(0.0001, dd/100) * 100).toFixed(1);
+        $('parity-mix-formula').textContent = 'mirror share × 33.3% + parity share × ' + pf + '%.';
+      }
+      $('failure-count-control').style.display = state.failure === 'multinode' ? 'block' : 'none';
+      $('failure-count-output').textContent = state.failureCount;
+      // resiliency button state + min-node gating
+      document.querySelectorAll('[data-resiliency]').forEach((btn) => {
+        const rule = Explorer.RESILIENCY[btn.dataset.resiliency];
+        const ok = state.nodes >= rule.minNodes;
+        btn.disabled = !ok; btn.style.opacity = ok ? '' : '0.4'; btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+        btn.title = ok ? '' : 'Requires ' + rule.minNodes + '+ nodes';
+        btn.setAttribute('aria-pressed', btn.dataset.resiliency === state.resiliency ? 'true' : 'false');
+      });
+    }
+    Explorer.subscribe(syncScenarioOutputs);
+
+    // Range + select wiring
+    $('nodes-range').addEventListener('input', (e) => {
+      const nodes = Number(e.target.value); const patch = { nodes: nodes };
+      // Preserve a custom volume count; otherwise keep the recommended one-volume-per-node alignment.
+      if (Explorer.state.volumeCount === Explorer.state.nodes) patch.volumeCount = nodes;
+      const rule = Explorer.RESILIENCY[Explorer.state.resiliency];
+      if (rule.minNodes > nodes) patch.resiliency = nodes >= 3 ? 'mirror3' : 'mirror2';
+      Explorer.update(patch);
+    });
+    $('drives-range').addEventListener('input', (e) => Explorer.update({ drives: Number(e.target.value) }));
+    $('drive-size-range').addEventListener('input', (e) => Explorer.update({ driveIndex: Number(e.target.value) }));
+    $('metadata-overhead-range').addEventListener('input', (e) => Explorer.update({ metadataPct: Number(e.target.value) }));
+    $('user-volume-count-range').addEventListener('input', (e) => Explorer.update({ volumeCount: Number(e.target.value) }));
+    $('user-volume-target-range').addEventListener('input', (e) => Explorer.update({ volumeTargetPct: Number(e.target.value) }));
+    $('parity-mix-range').addEventListener('input', (e) => Explorer.update({ parityMix: Number(e.target.value) }));
+    $('infra-reserve-select').addEventListener('change', (e) => Explorer.update({ infraGiB: Number(e.target.value) }));
+    $('perf-history-select').addEventListener('change', (e) => Explorer.update({ perfGiB: Number(e.target.value) }));
+    $('failure-scenario-select').addEventListener('change', (e) => Explorer.update({ failure: e.target.value }));
+    $('failure-count-select').addEventListener('change', (e) => Explorer.update({ failureCount: Number(e.target.value) }));
+    $('recovery-mode-select').addEventListener('change', (e) => Explorer.update({ recovery: e.target.value }));
+    document.querySelectorAll('[data-resiliency]').forEach((btn) => btn.addEventListener('click', () => { if (btn.disabled) return; Explorer.update({ resiliency: btn.dataset.resiliency }); }));
+
+    $('reset-btn').addEventListener('click', () => {
+      $('nodes-range').value = defaults.nodes; $('drives-range').value = defaults.drives; $('drive-size-range').value = defaults.driveIndex;
+      $('metadata-overhead-range').value = defaults.metadataPct; $('parity-mix-range').value = defaults.parityMix;
+      $('user-volume-count-range').value = defaults.volumeCount; $('user-volume-target-range').value = defaults.volumeTargetPct;
+      $('infra-reserve-select').value = defaults.infraGiB; $('perf-history-select').value = defaults.perfGiB;
+      $('failure-scenario-select').value = defaults.failure; $('failure-count-select').value = defaults.failureCount; $('recovery-mode-select').value = defaults.recovery;
+      Explorer.update(Object.assign({}, defaults));
+    });
+
+    // Tab navigation
+    const tabs = document.querySelectorAll('.app-nav [role="tab"]');
+    tabs.forEach((tab) => tab.addEventListener('click', () => {
+      tabs.forEach((t) => { const sel = t === tab; t.setAttribute('aria-selected', sel); const panel = $(t.getAttribute('aria-controls')); if (panel) panel.hidden = !sel; });
+      // re-render so any deferred chart (donut) sizes correctly
+      Explorer.notify();
+    }));
+
+    // Initial paint
+    Explorer.notify();
+  })();
+  </script>
+
+  <script>
+    if (window.GleanBridge) {
+      window.GleanBridge.postMessage({ actionId: 'export-pdf', type: 'glean-add-menu', metadata: { label: 'Export as PDF', icon: 'export' } });
+      window.GleanBridge.onMessage('action', function (data) { if (data.actionId === 'export-pdf') window.print(); });
+    }
+    function prepareChartsForPrint() {
+      document.querySelectorAll('[_echarts_instance_]').forEach(function (el) {
+        var chart = echarts.getInstanceByDom(el); if (!chart) return;
+        var img = new Image(); img.src = chart.getDataURL({ type: 'png', pixelRatio: 2 }); img.className = 'print-chart-img';
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain;position:absolute;top:0;left:0;z-index:10;';
+        el.dataset.prevPosition = el.style.position; el.style.position = 'relative'; el.appendChild(img);
+      });
+    }
+    function cleanUpAfterPrint() {
+      document.querySelectorAll('[_echarts_instance_]').forEach(function (el) {
+        var img = el.querySelector('.print-chart-img'); if (!img) return; img.remove(); el.style.position = el.dataset.prevPosition || ''; delete el.dataset.prevPosition;
+      });
+    }
+    window.addEventListener('beforeprint', prepareChartsForPrint);
+    window.addEventListener('afterprint', cleanUpAfterPrint);
+  </script>
+</body>
+</html>
